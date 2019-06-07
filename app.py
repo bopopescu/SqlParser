@@ -4,6 +4,7 @@ from flask import request, Response
 import json
 import yaml
 from wtforms import *
+from  flask_cors import CORS
 
 # IMPORTES NECESSARIOS PARA A COMPARACAO TEXTUAL DO SQL
 import sqlparse
@@ -27,6 +28,7 @@ app.config['MYSQL_PASSWORD'] = db['mysql_password']
 app.config['MYSQL_DB'] = db['mysql_db']
 
 mysql = MySQL(app)
+CORS(app)
 
 def is_subselect(parsed):
     if not parsed.is_group:
@@ -220,19 +222,21 @@ def alunos_update(aluno_id):
 def respostas():
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        cur.execute('SELECT RESPOSTA_ID, RESPOSTA_SQL FROM resposta;')
+        cur.execute('SELECT RESPOSTA_ID, RESPOSTA_SQL, ALUNO_ALUNO_ID, PERGUNTA_PERGUNTA_ID FROM resposta;')
         data = cur.fetchall()
         cur.close()
-        alunos = []
+        respostas = []
 
         for elm in data:
-            aluno = {
+            resposta = {
                 'resposta_id': elm[0],
-                'resposta_sql': elm[1]
+                'resposta_sql': elm[1],
+                'aluno_aluno_id': elm[2],
+                'pergunta_pergunta_id': elm[3]
             }
-            alunos.append(aluno)
+            respostas.append(resposta)
         #return render_template('/respostas/respostas.html', respostas=data)
-        return jsonify(data)
+        return jsonify(respostas)
 
 @app.route('/v1.0/resposta/<int:pergunta_id>/<int:aluno_id>',  methods=['POST'])
 def resposta_insert(pergunta_id, aluno_id):
@@ -441,14 +445,17 @@ def respostas_update(resposta_id):
     form = RespostaForm(request.form)
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        query = "SELECT RESPOSTA_SQL FROM RESPOSTA WHERE RESPOSTA_ID=%s"
+        query = "SELECT RESPOSTA_ID, resposta_sql, aluno_aluno_id, pergunta_pergunta_id FROM RESPOSTA WHERE RESPOSTA_ID=%s"
         cur.execute(query, (resposta_id,))
         data = cur.fetchall()
         if len(data) <= 0:
             return Response(status=404)
         else:
             resposta = { 
-                'resposta_sql': data[0][0]
+                'resposta_id': data[0][0],
+                'resposta_sql': data[0][1],
+                'aluno_aluno_id': data[0][2],
+                'pergunta_pergunta_id': data[0][3]
             }
             js = json.dumps(resposta)
             return Response(js, status=200, mimetype='application/json')
@@ -505,7 +512,7 @@ def perguntas():
         cur.execute("SELECT LAST_INSERT_ID()")
         data_last_inserted_id = cur.fetchall()
         last_inserted_id = data_last_inserted_id[0][0]
-        query = "SELECT PERGUNTA,PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID = %s;"
+        query = "SELECT PERGUNTA_ID, PERGUNTA,PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID = %s;"
         # COLOCA O ULTIMO INDEX INSERIDO DENTRO DE UMA QUERY
         cur.execute(query, (last_inserted_id,))
         data = cur.fetchall()
@@ -619,7 +626,6 @@ def resultados_update(resultado_id):
 @app.route('/v1.0/about')
 def about():
     return render_template('about.html')
-
 
 @app.errorhandler(404)
 def page_not_found(e):
