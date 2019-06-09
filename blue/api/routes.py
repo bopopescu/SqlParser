@@ -21,7 +21,7 @@ import datacompy
 from mysql.connector import Error
 
 
-modapi = Blueprint('modapi', __name__)
+modapi = Blueprint('api', __name__)
 
 @modapi.route('/v1.0/alunos/', methods=['POST', 'GET'])
 def alunos():
