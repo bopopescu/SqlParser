@@ -631,6 +631,10 @@ def about():
 def page_not_found(e):
     return 'This page was not found'
 
+@app.route('/')
+@app.route('/home')
+def home():
+    return render_template('home.html')
 
 if __name__ == '__main__':
     app.run(port=80,debug=True)
