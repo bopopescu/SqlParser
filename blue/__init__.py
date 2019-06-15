@@ -22,8 +22,8 @@ def create_app():
     # app.register_blueprint(site.routes.mod)
     app.register_blueprint(modapi, url_prefix='/api')
 
-    from blue.api import routes
-    app.register_blueprint(routes)
+    #from blue.api import routes
+    #app.register_blueprint(routes)
 
     return app
 
