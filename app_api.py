@@ -4,7 +4,7 @@ from flask import request, Response
 import json
 import yaml
 from wtforms import *
-from  flask_cors import CORS
+from flask_cors import CORS
 
 # IMPORTES NECESSARIOS PARA A COMPARACAO TEXTUAL DO SQL
 import sqlparse
@@ -29,6 +29,7 @@ app.config['MYSQL_DB'] = db['mysql_db']
 
 mysql = MySQL(app)
 CORS(app)
+
 
 def is_subselect(parsed):
     if not parsed.is_group:
@@ -72,8 +73,6 @@ def extract_tables(sql):
     return list(extract_table_identifiers(stream))
 
 
-
-
 class AlunoForm(Form):
     nome = StringField('nome', [validators.Length(min=3, max=45)])
     numero = IntegerField('numero', [validators.required()])
@@ -84,7 +83,7 @@ class PerguntaForm(Form):
     pergunta = StringField('pergunta', [validators.Length(min=15, max=255)])
     pergunta_sql = StringField(
         'pergunta_sql', [validators.Length(min=12, max=255)])
-    query_id = StringField('query_id', [validators.Length(min=2,max=45)])
+    query_id = StringField('query_id', [validators.Length(min=2, max=45)])
 
 
 class RespostaForm(Form):
@@ -116,14 +115,14 @@ def alunos():
 
         for elm in data:
             aluno = {
-                #'aluno_id' : elm[0],
+                'aluno_id': elm[0],
                 'nome': elm[1],
-                'numero': elm[2]#,
-                #'Password': elm[3]
+                'numero': elm[2]  # ,
+                # 'Password': elm[3]
             }
             alunos.append(aluno)
-        #print(data.row0)
-        #return render_template('/alunos/alunos.html', students=data)
+        # print(data.row0)
+        # return render_template('/alunos/alunos.html', students=data)
         js = json.dumps(alunos)
         resp = Response(js, status=200, mimetype='application/json')
         resp.headers['Links'] = 'http://127.0.0.1/alunos/'
@@ -149,7 +148,7 @@ def alunos():
 
         aluno = {
             'nome': data[0][0],
-            'numero': data[0][1] 
+            'numero': data[0][1]
         }
 
         js = json.dumps(aluno)
@@ -161,13 +160,11 @@ def alunos():
         resp.headers['Links'] = 'http://127.0.0.1/alunos/'
         return resp
 
-
-@app.route('/v1.0/aluno/<int:aluno_id>', methods=['PUT', 'DELETE', 'GET'])
-def alunos_update(aluno_id):
-    form = AlunoForm(request.form)
+@app.route('/v1.0/aluno/<int:aluno_id>', methods=['GET'])
+def aluno(aluno_id):
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        query = "SELECT NOME, NUMERO FROM aluno WHERE NUMERO=%s"
+        query = "SELECT NOME, NUMERO, PASSWORD FROM aluno WHERE NUMERO=%s"
         cur.execute(query, (aluno_id,))
         data = cur.fetchall()
         if len(data) <= 0:
@@ -175,13 +172,29 @@ def alunos_update(aluno_id):
         else:
             aluno = {
                 'nome': data[0][0],
-                'numero': data[0][1]
+                'numero': data[0][1],
+                'password': data[0][2]
             }
             js = json.dumps(aluno)
-            resp =  Response(js, status=200, mimetype='application/json')
+            resp = Response(js, status=200, mimetype='application/json')
             resp.headers['Links'] = 'http://127.0.0.1/aluno'
             return resp
-    elif request.method == 'PUT' and form.validate():
+    
+@app.route('/v1.0/aluno/delete/<int:aluno_id>', methods=['POST'])
+def aluno_delete(aluno_id):
+    if request.method == 'POST' and request.form['_method'] == 'delete':
+        query = "DELETE FROM aluno WHERE NUMERO = %s"
+        cur = mysql.connection.cursor()
+        cur.execute(query, (aluno_id,))
+        mysql.connection.commit()
+        cur.fetchall()
+        cur.close()
+        return Response(status=200)
+
+@app.route('/v1.0/aluno/update/<int:aluno_id>', methods=['POST'])
+def aluno_update(aluno_id):
+    form = AlunoForm(request.form)
+    if request.method == 'POST' and form.validate():
         nome = request.form["nome"]
         numero = request.form["numero"]
         password = request.form["password"]
@@ -193,7 +206,7 @@ def alunos_update(aluno_id):
             "SELECT NOME, NUMERO FROM aluno WHERE NUMERO = %s", (aluno_id,))
         data = cur.fetchall()
         cur.close()
-        
+
         print(" * DATA ")
         print(data)
 
@@ -206,23 +219,17 @@ def alunos_update(aluno_id):
         resp = Response(js, status=200, mimetype='application/json')
         resp.headers['Links'] = 'http://127.0.0.1/aluno'
         return resp
-    elif request.method == 'PUT' and not form.validate():
+    elif request.method == 'POST' and not form.validate():
         resp = Response(status=400)
         resp.headers['Links'] = 'http://127.0.0.1/aluno'
         return resp
-    elif request.method == 'DELETE':
-        query = "DELETE FROM aluno WHERE aluno_ID = %s"
-        cur = mysql.connection.cursor()
-        cur.execute(query, (aluno_id,))
-        mysql.connection.commit()
-        cur.fetchall()
-        return Response(status=200)
 
 @app.route('/v1.0/respostas/', methods=['GET'])
 def respostas():
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        cur.execute('SELECT RESPOSTA_ID, RESPOSTA_SQL, ALUNO_ALUNO_ID, PERGUNTA_PERGUNTA_ID FROM resposta;')
+        cur.execute(
+            'SELECT RESPOSTA_ID, RESPOSTA_SQL, ALUNO_ALUNO_ID, PERGUNTA_PERGUNTA_ID FROM resposta;')
         data = cur.fetchall()
         cur.close()
         respostas = []
@@ -235,8 +242,9 @@ def respostas():
                 'pergunta_pergunta_id': elm[3]
             }
             respostas.append(resposta)
-        #return render_template('/respostas/respostas.html', respostas=data)
+        # return render_template('/respostas/respostas.html', respostas=data)
         return jsonify(respostas)
+
 
 @app.route('/v1.0/resposta/<int:pergunta_id>/<int:aluno_id>',  methods=['POST'])
 def resposta_insert(pergunta_id, aluno_id):
@@ -250,7 +258,7 @@ def resposta_insert(pergunta_id, aluno_id):
         #     #from flask_mysqldb import MySQL
         #     #mysql = MySQL(app)
         #     #global mysql
-            
+
         # except Error as e:
         #     print()
         #     print("Error while connecting to MySQL", e)
@@ -274,7 +282,7 @@ def resposta_insert(pergunta_id, aluno_id):
 
         # PESQUISA O QUERY MYSQL DA PERGUNDA DO PROFESSOR
         query = "SELECT PERGUNTA_SQL,QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s"
-        cur.execute(query,(pergunta_id,))
+        cur.execute(query, (pergunta_id,))
         data = cur.fetchall()
 
         sqlquery = data[0][0]
@@ -288,7 +296,7 @@ def resposta_insert(pergunta_id, aluno_id):
 
         sqlquerykey = data[0][1]
 
-        # import mysql.connector 
+        # import mysql.connector
 
         # connection = MySQLdb.connect(host='localhost',
         #                              database='jg_teste',
@@ -296,16 +304,16 @@ def resposta_insert(pergunta_id, aluno_id):
         #                              password='user')
 
         print()
-        #import mysql.connector 
+        #import mysql.connector
         try:
             print("Cria a connexão!")
             print()
             connection = MySQLdb.connect(host='localhost',
-                                                database='jg_teste',
-                                                user='root',
-                                                password='user')
+                                         database='jg_teste',
+                                         user='root',
+                                         password='user')
 
-            if connection:#.is_connected():
+            if connection:  # .is_connected():
 
                 # ACRESCENTAR O ID
                 def acrescentar_id(query, id_):
@@ -335,11 +343,13 @@ def resposta_insert(pergunta_id, aluno_id):
                 print()
                 print("SQL QUERYS")
                 print(sqlquery)
-                sqlqueryprof = sqlquery #acrescentar_id(sqlquery, sqlquerykey)
+                # acrescentar_id(sqlquery, sqlquerykey)
+                sqlqueryprof = sqlquery
                 print(sqlqueryprof)
                 print()
                 print(sqlqueryal)
-                sqlqueryalun = sqlqueryal #acrescentar_id(sqlqueryal, sqlquerykey)
+                # acrescentar_id(sqlqueryal, sqlquerykey)
+                sqlqueryalun = sqlqueryal
                 print(sqlqueryalun)
 
                 # EXECUTAR CADA UMA DAS QUERYS
@@ -369,15 +379,22 @@ def resposta_insert(pergunta_id, aluno_id):
 
                 # IMPRIMIR RESULTADOS DA COMPARACAO ##
                 ######################################
-                print("#######################################################################################################")
-                print("Colunas que intreceptaram", len(compare.intersect_columns()))
-                print("Linhas que intreceptaram", compare.intersect_rows.shape[0])
+                print(
+                    "#######################################################################################################")
+                print("Colunas que intreceptaram",
+                      len(compare.intersect_columns()))
+                print("Linhas que intreceptaram",
+                      compare.intersect_rows.shape[0])
                 print()
-                print("Linha unicas no DataFrame 1:", len(compare.df1_unq_rows))
-                print("Linha unicas no DataFrame 2:", len(compare.df2_unq_rows))
+                print("Linha unicas no DataFrame 1:",
+                      len(compare.df1_unq_rows))
+                print("Linha unicas no DataFrame 2:",
+                      len(compare.df2_unq_rows))
                 print()
-                print("Colunas unicas de Dataframe 1 :", compare.df1_unq_columns())
-                print("Colunas unicas de Dataframe 2 :", compare.df2_unq_columns())
+                print("Colunas unicas de Dataframe 1 :",
+                      compare.df1_unq_columns())
+                print("Colunas unicas de Dataframe 2 :",
+                      compare.df2_unq_columns())
 
                 cursor_prof.rowcount
 
@@ -389,7 +406,7 @@ def resposta_insert(pergunta_id, aluno_id):
                 # AINDA ESTA POR CALCULAR
                 colunas_totais = 99999
                 colunas_iguais = 99999
-                
+
                 table_prof = extract_tables(sqlqueryprof)
                 table_alun = extract_tables(sqlqueryalun)
 
@@ -404,7 +421,8 @@ def resposta_insert(pergunta_id, aluno_id):
                 resposta_pergunta_pergunta_id = pergunta_id
 
                 query = "INSERT INTO RESULTADO (numero_linhas_iguais,numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id)VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
-                cur.execute(query,(numero_linhas_iguais,numero_colunas_iguais, colunas_totais,colunas_iguais,campos_totais,campos_iguais,pergunta_pergunta_id,resposta_resposta_id,resposta_aluno_aluno_id,resposta_pergunta_pergunta_id))
+                cur.execute(query, (numero_linhas_iguais, numero_colunas_iguais, colunas_totais, colunas_iguais, campos_totais,
+                                    campos_iguais, pergunta_pergunta_id, resposta_resposta_id, resposta_aluno_aluno_id, resposta_pergunta_pergunta_id))
                 mysql.connection.commit()
 
                 # print(data_frame_prof)
@@ -413,13 +431,12 @@ def resposta_insert(pergunta_id, aluno_id):
             print()
         finally:
             # closing database connection.
-            if(connection):#.is_connected()):
-                #cursor_prof.close()
-                #cursor_alun.close()
+            if(connection):  # .is_connected()):
+                # cursor_prof.close()
+                # cursor_alun.close()
                 connection.close()
                 print("MySQL connection is closed")
 
-        
         # SELECIONA A RESPOSTA ANTERIORMENTE INSERIDA
         query = "SELECT RESPOSTA_SQL FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
         cur.execute(query, (last_inserted_id,))
@@ -451,7 +468,7 @@ def respostas_update(resposta_id):
         if len(data) <= 0:
             return Response(status=404)
         else:
-            resposta = { 
+            resposta = {
                 'resposta_id': data[0][0],
                 'resposta_sql': data[0][1],
                 'aluno_aluno_id': data[0][2],
@@ -463,7 +480,7 @@ def respostas_update(resposta_id):
         resposta_sql = request.form["resposta_sql"]
         cur = mysql.connection.cursor()
         query = "UPDATE RESPOSTA SET RESPOSTA_SQL=%s WHERE RESPOSTA_ID = %s;"
-        cur.execute(query, (resposta_sql,resposta_id))
+        cur.execute(query, (resposta_sql, resposta_id))
         mysql.connection.commit()
         cur.execute(
             "SELECT RESPOSTA_SQL FROM RESPOSTA WHERE RESPOSTA_ID = %s;", (resposta_id,))
@@ -488,6 +505,7 @@ def respostas_update(resposta_id):
         cur.fetchall()
         return Response(status=200)
 
+
 @app.route('/v1.0/perguntas/', methods=['POST', 'GET'])
 def perguntas():
     form = PerguntaForm(request.form)
@@ -496,7 +514,7 @@ def perguntas():
         cur.execute("SELECT PERGUNTA,PERGUNTA_SQL FROM PERGUNTA;")
         data = cur.fetchall()
         cur.close()
-        #return render_template('/perguntas/perguntas.html', perguntas=data)
+        # return render_template('/perguntas/perguntas.html', perguntas=data)
         return jsonify(data)
     elif request.method == 'POST' and form.validate():
         # RECEBE OS DADOS DO REQUEST
@@ -506,7 +524,7 @@ def perguntas():
         # INSERE UM NOVA PERGUNTA DENTRO DA TABELA PERGUNTA
         cur = mysql.connection.cursor()
         query = "INSERT INTO PERGUNTA (PERGUNTA, PERGUNTA_SQL,query_id) VALUES (%s,%s,%s);"
-        cur.execute(query, (pergunta, pergunta_sql,query_id))
+        cur.execute(query, (pergunta, pergunta_sql, query_id))
         mysql.connection.commit()
         # SELECIONA O ULTIMO INDEX INSERIDO
         cur.execute("SELECT LAST_INSERT_ID()")
@@ -567,6 +585,7 @@ def perguntas_update(pergunta_id):
         cur.fetchall()
         return Response(status=200)
 
+
 @app.route('/v1.0/resultados/', methods=['GET'])
 def resultados():
     form = ResultadoForm(request.form)
@@ -596,7 +615,8 @@ def resultados():
                 resultados.append(resultado)
             js = json.dumps(resultados)
             return Response(js, status=200, mimetype='application/json')
-        #return render_template('/resultados/resultados.html', resultados=data)
+        # return render_template('/resultados/resultados.html', resultados=data)
+
 
 @app.route('/v1.0/resultado/<int:resultado_id>', methods=['GET'])
 def resultados_update(resultado_id):
@@ -621,20 +641,31 @@ def resultados_update(resultado_id):
                 'Resposta_Pergunta_Pergunta_id': data[0][9]
             }
             js = json.dumps(resultado)
-            return Response(js,status=200,mimetype='application/json')
+            return Response(js, status=200, mimetype='application/json')
+
 
 @app.route('/v1.0/about')
 def about():
     return render_template('about.html')
 
+
 @app.errorhandler(404)
 def page_not_found(e):
     return 'This page was not found'
+
 
 @app.route('/')
 @app.route('/home')
 def home():
     return render_template('home.html')
 
+
+@app.route('/teste/')
+def teste():
+    # dates = DataFrame(np.random.randn(6, 4), index=dates, columns=list('ABCD')
+
+    return '<h3>Teste</h3>'
+
+
 if __name__ == '__main__':
-    app.run(port=80,debug=True)
+    app.run(port=80, debug=True)
