@@ -420,8 +420,8 @@ def resposta_insert(pergunta_id, aluno_id):
                 resposta_aluno_aluno_id = aluno_id
                 resposta_pergunta_pergunta_id = pergunta_id
 
-                query = "INSERT INTO RESULTADO (numero_linhas_iguais,numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id)VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
-                cur.execute(query, (numero_linhas_iguais, numero_colunas_iguais, colunas_totais, colunas_iguais, campos_totais,
+                query = "INSERT INTO RESULTADO (numero_linhas_iguais, numero_linhas_totais,numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id)VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
+                cur.execute(query, (numero_linhas_iguais, numero_linhas_totais, numero_colunas_iguais, colunas_totais, colunas_iguais, campos_totais,
                                     campos_iguais, pergunta_pergunta_id, resposta_resposta_id, resposta_aluno_aluno_id, resposta_pergunta_pergunta_id))
                 mysql.connection.commit()
 
@@ -457,7 +457,7 @@ def resposta_insert(pergunta_id, aluno_id):
         return resp
 
 
-@app.route('/v1.0/resposta/<int:resposta_id>', methods=['PUT', 'DELETE', 'GET'])
+@app.route('/v1.0/respostas/<int:resposta_id>', methods=['GET'])
 def respostas_update(resposta_id):
     form = RespostaForm(request.form)
     if request.method == 'GET':
@@ -476,7 +476,39 @@ def respostas_update(resposta_id):
             }
             js = json.dumps(resposta)
             return Response(js, status=200, mimetype='application/json')
-    elif request.method == 'PUT' and form.validate():
+    # elif request.method == 'PUT' and form.validate():
+    #     resposta_sql = request.form["resposta_sql"]
+    #     cur = mysql.connection.cursor()
+    #     query = "UPDATE RESPOSTA SET RESPOSTA_SQL=%s WHERE RESPOSTA_ID = %s;"
+    #     cur.execute(query, (resposta_sql, resposta_id))
+    #     mysql.connection.commit()
+    #     cur.execute(
+    #         "SELECT RESPOSTA_SQL FROM RESPOSTA WHERE RESPOSTA_ID = %s;", (resposta_id,))
+    #     data = cur.fetchall()
+    #     cur.close()
+    #     resposta = {
+    #         'resposta_sql': data[0][0]
+    #     }
+    #     js = json.dumps(resposta)
+    #     resp = Response(js, status=200, mimetype='application/json')
+    #     resp.headers['Links'] = 'http://127.0.0.1/respostas/'
+    #     return resp
+    # elif request.method == 'PUT' and not form.validate():
+    #     resp = Response(status=400)
+    #     resp.headers['Links'] = 'http://127.0.0.1/respostas/'
+    #     return resp
+    # elif request.method == 'DELETE':
+    #     query = "DELETE FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
+    #     cur = mysql.connection.cursor()
+    #     cur.execute(query, (resposta_id,))
+    #     mysql.connection.commit()
+    #     cur.fetchall()
+    #     return Response(status=200)
+
+@app.route('/v1.0/resposta/update/<int:resposta_id>', methods = ['POST'])
+def resposta_update(resposta_id):
+    form = RespostaForm(request.form)
+    if request.method == 'POST' and form.validate():
         resposta_sql = request.form["resposta_sql"]
         cur = mysql.connection.cursor()
         query = "UPDATE RESPOSTA SET RESPOSTA_SQL=%s WHERE RESPOSTA_ID = %s;"
@@ -493,11 +525,14 @@ def respostas_update(resposta_id):
         resp = Response(js, status=200, mimetype='application/json')
         resp.headers['Links'] = 'http://127.0.0.1/respostas/'
         return resp
-    elif request.method == 'PUT' and not form.validate():
+    elif request.method == 'POST' and not form.validate():
         resp = Response(status=400)
         resp.headers['Links'] = 'http://127.0.0.1/respostas/'
         return resp
-    elif request.method == 'DELETE':
+
+@app.route('/v1.0/resposta/delete/<int:resposta_id>', methods = ['POST'])
+def resposta_delete(resposta_id):
+    if request.method == 'DELETE' and request.form['_method'] == 'delete':
         query = "DELETE FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
         cur = mysql.connection.cursor()
         cur.execute(query, (resposta_id,))
@@ -505,17 +540,27 @@ def respostas_update(resposta_id):
         cur.fetchall()
         return Response(status=200)
 
-
 @app.route('/v1.0/perguntas/', methods=['POST', 'GET'])
 def perguntas():
     form = PerguntaForm(request.form)
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        cur.execute("SELECT PERGUNTA,PERGUNTA_SQL FROM PERGUNTA;")
+        cur.execute("SELECT PERGUNTA_ID, PERGUNTA,PERGUNTA_SQL FROM PERGUNTA;")
         data = cur.fetchall()
         cur.close()
+
+        perguntas = []
+
+        for elm in data:
+            aluno = {
+                'pergunta_id': elm[0],
+                'pergunta': elm[1],
+                'pergunta_sql': elm[2]
+            }
+            perguntas.append(aluno)
+
         # return render_template('/perguntas/perguntas.html', perguntas=data)
-        return jsonify(data)
+        return jsonify(perguntas)
     elif request.method == 'POST' and form.validate():
         # RECEBE OS DADOS DO REQUEST
         pergunta = request.form["pergunta"]
@@ -544,40 +589,33 @@ def perguntas():
         resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
         return resp
 
-
-@app.route('/v1.0/perguntas/<int:pergunta_id>', methods=['PUT', 'DELETE', 'GET'])
-def perguntas_update(pergunta_id):
+@app.route('/v1.0/pergunta/update/<int:pergunta_id>', methods=['POST'])
+def pergunta_update(pergunta_id):
     form = PerguntaForm(request.form)
-    if request.method == 'GET':
-        cur = mysql.connection.cursor()
-        query = "SELECT PERGUNTA, PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID=%s"
-        cur.execute(query, (pergunta_id,))
-        data = cur.fetchall()
-        if len(data) <= 0:
-            return Response(status=404)
-        else:
-            js = json.dumps(data)
-            return Response(js, status=200, mimetype='application/json')
-    elif request.method == 'PUT' and form.validate():
+    if request.method == 'POST' and form.validate():
         pergunta = request.form["pergunta"]
         pergunta_sql = request.form["pergunta_sql"]
+        query_id = request.form["query_id"]
         cur = mysql.connection.cursor()
-        query = "UPDATE aluno SET PERGUNTA=%s, PERGUNTA_SQL=%s WHERE PREGUNTA_ID = %s"
-        cur.execute(query, (pergunta, pergunta_sql, pergunta_id))
+        query = "UPDATE PERGUNTA SET PERGUNTA=%s, PERGUNTA_SQL=%s, QUERY_ID=%s WHERE PERGUNTA_ID = %s"
+        cur.execute(query, (pergunta, pergunta_sql, query_id, pergunta_id ))
         mysql.connection.commit()
         cur.execute(
-            "SELECT PERGUNTA, PERGUNTA_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s", (pergunta_id,))
+            "SELECT PERGUNTA, PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s", (pergunta_id,))
         data = cur.fetchall()
         cur.close()
         js = json.dumps(data)
         resp = Response(js, status=200, mimetype='application/json')
         resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
         return resp
-    elif request.method == 'PUT' and not form.validate():
+    elif request.method == 'POST' and not form.validate():
         resp = Response(status=400)
         resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
         return resp
-    elif request.method == 'DELETE':
+
+@app.route('/v1.0/pergunta/delete/<int:pergunta_id>', methods=['POST'])
+def pergunta_delete(pergunta_id):
+    if request.method == 'POST' and request.form['_method'] == 'delete':
         query = "DELETE FROM PERGUNTA WHERE PERGUNTA_ID = %s"
         cur = mysql.connection.cursor()
         cur.execute(query, (pergunta_id,))
@@ -585,13 +623,63 @@ def perguntas_update(pergunta_id):
         cur.fetchall()
         return Response(status=200)
 
+@app.route('/v1.0/perguntas/<int:pergunta_id>', methods=['GET'])
+def perguntas_update(pergunta_id):
+    form = PerguntaForm(request.form)
+    if request.method == 'GET':
+        cur = mysql.connection.cursor()
+        query = "SELECT PERGUNTA_ID, PERGUNTA, PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID=%s"
+        cur.execute(query, (pergunta_id,))
+        data = cur.fetchall()
+        if len(data) <= 0:
+            return Response(status=404)
+        else:
+            
+            pergunta = {
+                'pergunta_id': data[0][0],
+                'pergunta': data[0][1],
+                'pergunta_sql': data[0][2],
+                'query_id': data[0][3]
+            }
+
+            print(json.dumps(pergunta))
+            js = json.dumps(pergunta)
+            return Response(js, status=200, mimetype='application/json')
+    # elif request.method == 'PUT' and form.validate():
+    #     pergunta = request.form["pergunta"]
+    #     pergunta_sql = request.form["pergunta_sql"]
+    #     query_id = request.form["query_id"]
+    #     cur = mysql.connection.cursor()
+    #     query = "UPDATE PERGUNTA SET PERGUNTA=%s, PERGUNTA_SQL=%s, QUERY_ID=%s WHERE PERGUNTA_ID = %s"
+    #     cur.execute(query, (pergunta, pergunta_sql, query_id, pergunta_id ))
+    #     mysql.connection.commit()
+    #     cur.execute(
+    #         "SELECT PERGUNTA, PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s", (pergunta_id,))
+    #     data = cur.fetchall()
+    #     cur.close()
+    #     js = json.dumps(data)
+    #     resp = Response(js, status=200, mimetype='application/json')
+    #     resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
+    #     return resp
+    # elif request.method == 'PUT' and not form.validate():
+    #     resp = Response(status=400)
+    #     resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
+    #     return resp
+    # elif request.method == 'DELETE':
+    #     query = "DELETE FROM PERGUNTA WHERE PERGUNTA_ID = %s"
+    #     cur = mysql.connection.cursor()
+    #     cur.execute(query, (pergunta_id,))
+    #     mysql.connection.commit()
+    #     cur.fetchall()
+    #     return Response(status=200)
+
 
 @app.route('/v1.0/resultados/', methods=['GET'])
 def resultados():
     form = ResultadoForm(request.form)
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        cur.execute('SELECT numero_linhas_iguais,numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id FROM resultado;')
+        cur.execute('SELECT resultado_id, numero_linhas_iguais, numero_linhas_totais, numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id FROM resultado;')
         data = cur.fetchall()
         cur.close()
         if len(data) <= 0:
@@ -601,16 +689,18 @@ def resultados():
 
             for elm in data:
                 resultado = {
-                    'numero_linhas_iguais': elm[0],
-                    'numero_colunas_iguais': elm[1],
-                    'colunas_totais': elm[2],
-                    'colunas_iguais': elm[3],
-                    'campos_totais': elm[4],
-                    'campos_iguais': elm[5],
-                    'Pergunta_Pergunta_id': elm[6],
-                    'Resposta_Resposta_id': elm[7],
-                    'Resposta_Aluno_Aluno_id': elm[8],
-                    'Resposta_Pergunta_Pergunta_id': elm[9]
+                    'resultado_id': elm[0],
+                    'numero_linhas_iguais': elm[1],
+                    'numero_linhas_totais': elm[2],
+                    'numero_colunas_iguais': elm[3],
+                    'colunas_totais': elm[4],
+                    'colunas_iguais': elm[5],
+                    'campos_totais': elm[6],
+                    'campos_iguais': elm[7],
+                    'pergunta_pergunta_id': elm[8],
+                    'resposta_resposta_id': elm[9],
+                    'resposta_aluno_aluno_id': elm[10],
+                    'resposta_pergunta_pergunta_id': elm[11]
                 }
                 resultados.append(resultado)
             js = json.dumps(resultados)
