@@ -18,6 +18,10 @@ import pandas
 import datacompy
 from mysql.connector import Error
 
+# SIMPLESMENTE CORES
+from colorama import Fore,Style
+from termcolor import colored
+
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object(__name__)
 
@@ -29,6 +33,24 @@ app.config['MYSQL_DB'] = db['mysql_db']
 
 mysql = MySQL(app)
 CORS(app)
+
+# ACRESCENTAR O ID
+def acrescentar_id(query, id_):
+        queryparsed = sqlparse.parse(query)
+        # print(queryparsed[0])
+        lista = list()
+        for each in queryparsed[0]:
+            if each.value == "SELECT":
+                lista.append(each.value)
+                lista.append(" ")
+                lista.append(id_+",")
+                print(''.join(lista))
+            else:
+                lista.append(each.value)
+        print(lista)
+        lista = ''.join(lista)
+        # print(lista)
+        return lista
 
 
 def is_subselect(parsed):
@@ -160,6 +182,7 @@ def alunos():
         resp.headers['Links'] = 'http://127.0.0.1/alunos/'
         return resp
 
+
 @app.route('/v1.0/aluno/<int:aluno_id>', methods=['GET'])
 def aluno(aluno_id):
     if request.method == 'GET':
@@ -179,7 +202,8 @@ def aluno(aluno_id):
             resp = Response(js, status=200, mimetype='application/json')
             resp.headers['Links'] = 'http://127.0.0.1/aluno'
             return resp
-    
+
+
 @app.route('/v1.0/aluno/delete/<int:aluno_id>', methods=['POST'])
 def aluno_delete(aluno_id):
     if request.method == 'POST' and request.form['_method'] == 'delete':
@@ -190,6 +214,7 @@ def aluno_delete(aluno_id):
         cur.fetchall()
         cur.close()
         return Response(status=200)
+
 
 @app.route('/v1.0/aluno/update/<int:aluno_id>', methods=['POST'])
 def aluno_update(aluno_id):
@@ -224,6 +249,7 @@ def aluno_update(aluno_id):
         resp.headers['Links'] = 'http://127.0.0.1/aluno'
         return resp
 
+
 @app.route('/v1.0/respostas/', methods=['GET'])
 def respostas():
     if request.method == 'GET':
@@ -254,23 +280,8 @@ def resposta_insert(pergunta_id, aluno_id):
         resposta_sql = request.form["resposta_sql"]
         # INSERE NA BASE DE DADOS A NOVA RESPOSTA
         cur = mysql.connection.cursor()
-        # try:
-        #     #from flask_mysqldb import MySQL
-        #     #mysql = MySQL(app)
-        #     #global mysql
 
-        # except Error as e:
-        #     print()
-        #     print("Error while connecting to MySQL", e)
-        #     print()
-        # finally:
-        #     from flask_mysqldb import MySQL
-        #     mysql = MySQL(app)
-        #     print("MYSQL *************************")
-        #     print(mysql)
-        #     conn = mysql.connection()
-        #     cur = conn.cursor()
-
+        # Insere a resposta no lugar certo da base de dados
         query = "INSERT INTO resposta (pergunta_pergunta_id, aluno_aluno_id, resposta_sql) VALUES (%s,%s,%s);"
         cur.execute(query, (pergunta_id, aluno_id, resposta_sql))
         mysql.connection.commit()
@@ -294,19 +305,13 @@ def resposta_insert(pergunta_id, aluno_id):
 
         #sqlparsed = sqlparse.parse(sqlquery)
 
+        # DETERMINA A PARTIR DA TABELA PERGUNTA O QUERY ID A SER UTILIZADO
         sqlquerykey = data[0][1]
-
-        # import mysql.connector
-
-        # connection = MySQLdb.connect(host='localhost',
-        #                              database='jg_teste',
-        #                              user='root',
-        #                              password='user')
 
         print()
         #import mysql.connector
         try:
-            print("Cria a connexão!")
+            print('Cria a conexão!')
             print()
             connection = MySQLdb.connect(host='localhost',
                                          database='jg_teste',
@@ -314,24 +319,6 @@ def resposta_insert(pergunta_id, aluno_id):
                                          password='user')
 
             if connection:  # .is_connected():
-
-                # ACRESCENTAR O ID
-                def acrescentar_id(query, id_):
-                    queryparsed = sqlparse.parse(query)
-                    # print(queryparsed[0])
-                    lista = list()
-                    for each in queryparsed[0]:
-                        if each.value == "SELECT":
-                            lista.append(each.value)
-                            lista.append(" ")
-                            lista.append(id_+",")
-                            print(''.join(lista))
-                        else:
-                            lista.append(each.value)
-                    print(lista)
-                    lista = ''.join(lista)
-                    # print(lista)
-                    return lista
 
                 print("IMPRIME A DATA_FRAME_KEY")
                 print(sqlquerykey)
@@ -341,33 +328,64 @@ def resposta_insert(pergunta_id, aluno_id):
                 print("CHAVE:")
                 print(sqlquerykey)
                 print()
-                print("SQL QUERYS")
-                print(sqlquery)
+                # print("SQL QUERYS")
+                # print(sqlquery)
                 # acrescentar_id(sqlquery, sqlquerykey)
                 sqlqueryprof = sqlquery
                 print(sqlqueryprof)
                 print()
-                print(sqlqueryal)
-                # acrescentar_id(sqlqueryal, sqlquerykey)
+                # print()
+                # print(sqlqueryal)
+                # # acrescentar_id(sqlqueryal, sqlquerykey)
                 sqlqueryalun = sqlqueryal
                 print(sqlqueryalun)
+                print()
 
+                print("#########################################################################################")
+                # ANTES DE EXECUTAR CADA UMA DAS QUERYS VEREFICAR QUAIS AS TABELAS QUE SAO UTLIZADAS EM CADA UMA
+                # VERIFICAR QUE TABELAS EXISTEM PARA O PROFESSOR
+                query = "EXPLAIN " + sqlqueryprof
+                print("QUERY EXPLAIN DO PROFESSOR")
+                print(query)
+                #connection.commit()
+                cursor = connection.cursor()
+                cursor.execute(query)
+                explain_prof = cur.fetchall()
+                print("TABELA EXPLICATIVA DA QUERY DO PROFESSOR")
+                data_frame_expl_prof = pandas.DataFrame(list(explain_prof))
+                print(data_frame_expl_prof)
+
+                # VERIFICAR QUE TABELAS EXISTEM PARA O ALUNO
+                query = "EXPLAIN " + sqlqueryalun
+                print("QUERY EXPLAIN DO ALUNO")
+                print(query)
+                #connection.commit()
+                cursor = connection.cursor()
+                cursor.execute(query)
+                explain_alun = cur.fetchall()
+                print("TABELA EXPLICATIVA DA QUERY DO ALUNO")
+                data_frame_expl_alun = pandas.DataFrame(list(explain_alun))
+                print(data_frame_expl_alun)
+
+                print("#################################################################")
                 # EXECUTAR CADA UMA DAS QUERYS
                 cursor_prof = connection.cursor()
                 cursor_prof.execute(sqlqueryprof)
                 records_prof = cursor_prof.fetchall()
 
                 data_frame_prof = pandas.DataFrame(list(records_prof))
-                # print(data_frame_prof)
+                print("IMPRIMIR O DATA FRAME RESULTANTE DO PROFESSOR A CONEXAO")
+                print(data_frame_prof)
 
                 cursor_alun = connection.cursor()
                 cursor_alun.execute(sqlqueryalun)
                 records_query = cursor_alun.fetchall()
 
                 data_frame_alun = pandas.DataFrame(list(records_query))
-                print()
+                print("IMPRIMIR O DATA FRAME RESULTANTE DO ALUNO A CONEXAO")
+                print(data_frame_alun)
 
-                # COMPARACAO DOS DATA FRAMES
+                # CRIACAO DOS DATA FRAMES PARA COMPARACAO COM datacompy
                 data_prof = pandas.read_sql(sqlqueryprof, con=connection)
                 data_alun = pandas.read_sql(sqlqueryalun, con=connection)
 
@@ -398,8 +416,13 @@ def resposta_insert(pergunta_id, aluno_id):
 
                 cursor_prof.rowcount
 
-                numero_linhas_totais = len(compare.df1_unq_rows)
+                #print("IMPRIME LINHAS UNICAS")
+                #print(data_prof)
+                numero_linhas_totais = len(data_prof)
+                print("NUMERO DE LINHAS EM DATAFRAME 1")
+                print(numero_linhas_totais)
                 numero_linhas_iguais = compare.intersect_rows.shape[0]
+                print("NUMERO DE COLUNAS QUE SE INTRESEPTAM COM O NOS DATAFRAMES")
                 numero_colunas_iguais = len(compare.intersect_columns())
                 print(len(compare.intersect_columns()))
 
@@ -420,7 +443,7 @@ def resposta_insert(pergunta_id, aluno_id):
                 resposta_aluno_aluno_id = aluno_id
                 resposta_pergunta_pergunta_id = pergunta_id
 
-                query = "INSERT INTO RESULTADO (numero_linhas_iguais, numero_linhas_totais,numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id)VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
+                query = "INSERT INTO RESULTADO (numero_linhas_iguais, numero_linhas_totais,numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id)VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);"
                 cur.execute(query, (numero_linhas_iguais, numero_linhas_totais, numero_colunas_iguais, colunas_totais, colunas_iguais, campos_totais,
                                     campos_iguais, pergunta_pergunta_id, resposta_resposta_id, resposta_aluno_aluno_id, resposta_pergunta_pergunta_id))
                 mysql.connection.commit()
@@ -505,7 +528,8 @@ def respostas_update(resposta_id):
     #     cur.fetchall()
     #     return Response(status=200)
 
-@app.route('/v1.0/resposta/update/<int:resposta_id>', methods = ['POST'])
+
+@app.route('/v1.0/resposta/update/<int:resposta_id>', methods=['POST'])
 def resposta_update(resposta_id):
     form = RespostaForm(request.form)
     if request.method == 'POST' and form.validate():
@@ -530,15 +554,18 @@ def resposta_update(resposta_id):
         resp.headers['Links'] = 'http://127.0.0.1/respostas/'
         return resp
 
-@app.route('/v1.0/resposta/delete/<int:resposta_id>', methods = ['POST'])
+
+@app.route('/v1.0/resposta/delete/<int:resposta_id>', methods=['POST'])
 def resposta_delete(resposta_id):
-    if request.method == 'DELETE' and request.form['_method'] == 'delete':
+    if request.method == 'POST' and request.form['_method'] == 'delete':
         query = "DELETE FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
         cur = mysql.connection.cursor()
         cur.execute(query, (resposta_id,))
         mysql.connection.commit()
         cur.fetchall()
+        cur.close()
         return Response(status=200)
+
 
 @app.route('/v1.0/perguntas/', methods=['POST', 'GET'])
 def perguntas():
@@ -589,6 +616,7 @@ def perguntas():
         resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
         return resp
 
+
 @app.route('/v1.0/pergunta/update/<int:pergunta_id>', methods=['POST'])
 def pergunta_update(pergunta_id):
     form = PerguntaForm(request.form)
@@ -598,7 +626,7 @@ def pergunta_update(pergunta_id):
         query_id = request.form["query_id"]
         cur = mysql.connection.cursor()
         query = "UPDATE PERGUNTA SET PERGUNTA=%s, PERGUNTA_SQL=%s, QUERY_ID=%s WHERE PERGUNTA_ID = %s"
-        cur.execute(query, (pergunta, pergunta_sql, query_id, pergunta_id ))
+        cur.execute(query, (pergunta, pergunta_sql, query_id, pergunta_id))
         mysql.connection.commit()
         cur.execute(
             "SELECT PERGUNTA, PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s", (pergunta_id,))
@@ -613,6 +641,7 @@ def pergunta_update(pergunta_id):
         resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
         return resp
 
+
 @app.route('/v1.0/pergunta/delete/<int:pergunta_id>', methods=['POST'])
 def pergunta_delete(pergunta_id):
     if request.method == 'POST' and request.form['_method'] == 'delete':
@@ -622,6 +651,7 @@ def pergunta_delete(pergunta_id):
         mysql.connection.commit()
         cur.fetchall()
         return Response(status=200)
+
 
 @app.route('/v1.0/perguntas/<int:pergunta_id>', methods=['GET'])
 def perguntas_update(pergunta_id):
@@ -634,7 +664,7 @@ def perguntas_update(pergunta_id):
         if len(data) <= 0:
             return Response(status=404)
         else:
-            
+
             pergunta = {
                 'pergunta_id': data[0][0],
                 'pergunta': data[0][1],
