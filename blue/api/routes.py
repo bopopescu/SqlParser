@@ -1,7 +1,8 @@
-from app import Flask, render_template, url_for, redirect, jsonify
+import MySQLdb
+from flask import Flask, render_template, url_for, redirect, jsonify
 
 #from flask import Flask, render_template, url_for, redirect, jsonify
-from Flask import Blueprint
+from flask import Blueprint
 #from blue import create_app
 
 from flask_mysqldb import MySQL
@@ -9,13 +10,12 @@ from flask import request, Response
 import json
 import yaml
 from  flask_cors import CORS
-from app import mysql
+from blue.mysql  import mysql
 from blue.api.utils import extract_tables
 from blue.api.forms import *
 
 # IMPORTES NECESSARIOS PARA A COMPARACAO ATRAVES DE DATASET DOS COMANDOS DE SQL
 import sqlparse
-import MySQLdb._mysql
 import pandas
 import datacompy
 from mysql.connector import Error

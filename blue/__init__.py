@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_mysqldb import MySQL
+
 import yaml
 from flask_cors import CORS
 
@@ -26,6 +26,3 @@ def create_app():
     #app.register_blueprint(routes)
 
     return app
-
-def create_MySQL_connection(app):
-    return MySQL(app)

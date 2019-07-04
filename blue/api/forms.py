@@ -1,8 +1,5 @@
-from Flask import Blueprint
 from wtforms import *
 
-
-utils = Blueprint('forms', __name__)
 
 class AlunoForm(Form):
     nome = StringField('nome', [validators.Length(min=3, max=45)])

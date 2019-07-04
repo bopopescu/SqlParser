@@ -1,0 +1,9 @@
+flask
+flask-mysqldb
+PyYAML
+flask-cors
+sqlparse
+pandas
+datacompy
+mysql-connector
+wtforms

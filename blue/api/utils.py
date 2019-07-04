@@ -1,11 +1,7 @@
-from flask import Blueprint
-
 # IMPORTES NECESSARIOS PARA A COMPARACAO TEXTUAL DO SQL
 import sqlparse
 from sqlparse.sql import IdentifierList, Identifier
 from sqlparse.tokens import Keyword, DML
-
-utils = Blueprint('utils', __name__)
 
 
 def is_subselect(parsed):
