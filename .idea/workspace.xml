@@ -1,18 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="501f35bf-28ed-468d-808f-33d82c093540" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/tryflask.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/blue/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/blue/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/blue/api/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/blue/api/forms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/blue/api/routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/blue/api/routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/blue/api/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/blue/api/utils.py" afterDir="false" />
-    </list>
+    <list default="true" id="501f35bf-28ed-468d-808f-33d82c093540" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -187,7 +176,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1382" height="744" extended-state="7" />
+    <frame x="-8" y="-8" width="1382" height="744" extended-state="6" />
     <layout>
       <window_info id="Favorites" side_tool="true" />
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.21279761" />
