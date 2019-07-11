@@ -309,6 +309,7 @@ def resposta_insert(pergunta_id, aluno_id):
         # Verifica a qualidade do SQL
         ###############################################################
         resposta_sql_alun = resposta_sql_alun.upper()
+
         print("RESPOSTA SQL ALUN")
         print(resposta_sql_alun)
         ############ E QUE TAL FAZER ISTO TUDO DENTRO DE UMA FUNCAO ????? ############
@@ -325,7 +326,23 @@ def resposta_insert(pergunta_id, aluno_id):
         print(cursor)
         # Verifica se o comando pode ser executado 
         # Caso não seja levanta uma excepção
-        cursor.execute(query)
+        try:
+
+            cursor.execute(query)
+
+        except Exception as error:
+
+            print(error)
+            print("dir error ", dir(error))
+            print("error something", error.args)
+            erro = {
+                'erro': error.args
+            }
+            js = json.dumps(erro)
+            print(js)
+            print("ERROR SOMETHING!!!")
+            return Response(js, status=406, mimetype='application/json')
+
         # Verifica se o comando pode ser executado 
         # Caso não seja levanta uma excepção
         explain_alun = cursor.fetchall()
@@ -334,14 +351,16 @@ def resposta_insert(pergunta_id, aluno_id):
         alun_tabela = []
         for each_tabela in explain_alun:
             alun_tabela.append(each_tabela[2])
+        for each in alun_tabela:
+            each.upper()
         print("#########################")
         print("## TABELAS ENCONTRADAS ##")
         print("#########################")
         print("TABELAS ENCONTRADAS NA QUERY ALUNO")
         print(alun_tabela)
-        print("TABELAS ENCONTRADAS NA QUERY ALUNO - SEM REPETICAO")
-        alun_tabela = list(dict.fromkeys(alun_tabela))
-        print(alun_tabela)
+        # print("TABELAS ENCONTRADAS NA QUERY ALUNO - SEM REPETICAO")
+        # alun_tabela = list(dict.fromkeys(alun_tabela))
+        # print(alun_tabela)
         # PESQUISA O QUERY MYSQL DA PERGUNDA DO PROFESSOR
         query = "SELECT PERGUNTA_SQL,QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s"
         mydb_cur.execute(query, (pergunta_id,))
@@ -362,15 +381,16 @@ def resposta_insert(pergunta_id, aluno_id):
         prof_tabela = []
         for each_tabela in explain_prof:
             prof_tabela.append(each_tabela[2])
-
+        for each in prof_tabela:
+            each.upper()
         print("TABELAS ENCONTRADAS NA QUERY PROFESSOR")
         print(prof_tabela)
-        print("TABELAS ENCONTRADAS NA QUERY PROFESSOR - SEM REPETICAO")
-        prof_tabela = list(dict.fromkeys(prof_tabela))
-        print(prof_tabela)
+        # print("TABELAS ENCONTRADAS NA QUERY PROFESSOR - SEM REPETICAO")
+        # prof_tabela = list(dict.fromkeys(prof_tabela))
+        # print(prof_tabela)
 
         join_alun_prof_tabela = set(alun_tabela) & set(prof_tabela)
-        print("JOIN TABELAS ALUNO E PROFESSOR - SEM REPETICAO")
+        print("JOIN TABELAS ALUNO E PROFESSOR")
         print(join_alun_prof_tabela)
 
         ################## if(len(join_alun_prof_tabela) == 0):
@@ -548,7 +568,7 @@ def resposta_insert(pergunta_id, aluno_id):
         tabelas_totais = len(prof_tabela)
         print("TABELAS TOTAIS: ", tabelas_totais)
         tabelas_iguais = len(join_alun_prof_tabela)
-        print("TABELAS IGUAIS", tabelas_iguais)
+        print("TABELAS IGUAIS: ", tabelas_iguais)
 
         query = "INSERT INTO RESULTADO (numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais, Pergunta_Pergunta_id) VALUES (%s,%s,%s,%s,%s);"
         mydb_cur.execute(query, (numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais, pergunta_pergunta_id))
@@ -570,11 +590,35 @@ def resposta_insert(pergunta_id, aluno_id):
         mysql.connection.commit()
 
         print("COMIT RESPOSTA BEM EXECUTADO")
+
         # SELECIONA O ULTIMO INDEX INSERIDO
         mydb_cur.execute("SELECT LAST_INSERT_ID();")
         data_last_inserted_id = mydb_cur.fetchall()
         last_inserted_id = data_last_inserted_id[0][0]
         resposta_id = last_inserted_id
+
+        # INSERE PARA CADA RESPOSTA AS TABELAS ENCONTRADAS CORRESPONDENTES NA BASE DE DADOS
+        # 
+        # Para a lista calculada a cima necessita de remover os duplicados e ignorar as leituras com < ou > no seu conteudo
+        alun_tabela_tabela = alun_tabela
+        alun_tabela_tabela = list(dict.fromkeys(alun_tabela_tabela))
+        alun_tabela_tabela = [x for x in alun_tabela_tabela if not ("<" in x)]
+
+        # Para a lista acima calculada verificar onde existe correspondencia com a lista anterior
+        # Recolher os ids das tabelas a serem usados
+        # para cada ID de tabela distinto inserir o ID completo de resposta composto por:
+        # resposta_Resposta_id
+        # resposta_Aluno_Aluno_id
+        # tabela_Tabela_id
+
+        for each_tabela in alun_tabela_tabela:
+            query = "SELECT TABELA_ID FROM TABELA WHERE NOME = %s"
+            mydb_cur.execute(query, (each_tabela,))
+            tabela_id = mydb_cur.fetchall()
+            tabela_id = tabela_id[0][0]
+            query = "INSERT INTO resposta_has_tabela (resposta_Resposta_id, resposta_Aluno_Aluno_id, resposta_Pergunta_Pergunta_id, tabela_Tabela_id) VALUES (%s,%s,%s,%s);"
+            mydb_cur.execute(query, (resposta_id,aluno_id,pergunta_id,tabela_id))
+            mysql.connection.commit()
 
         # SELECIONA A RESPOSTA ANTERIORMENTE INSERIDA
         query = "SELECT RESPOSTA_SQL FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
@@ -607,7 +651,7 @@ def respostas_update(resposta_id):
     form = RespostaForm(request.form)
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        query = "SELECT RESPOSTA_ID, resposta_sql, aluno_aluno_id, pergunta_pergunta_id FROM RESPOSTA WHERE RESPOSTA_ID=%s"
+        query = "SELECT RESPOSTA_ID, resposta_sql, aluno_aluno_id, pergunta_pergunta_id, resultado_Resultado_id, resultado_Pergunta_Pergunta_id FROM RESPOSTA WHERE RESPOSTA_ID=%s"
         cur.execute(query, (resposta_id,))
         data = cur.fetchall()
         if len(data) <= 0:
@@ -617,7 +661,9 @@ def respostas_update(resposta_id):
                 'resposta_id': data[0][0],
                 'resposta_sql': data[0][1],
                 'aluno_aluno_id': data[0][2],
-                'pergunta_pergunta_id': data[0][3]
+                'pergunta_pergunta_id': data[0][3],
+                'resultado_Resultado_id': data[0][4],
+                'resultado_Pergunta_Pergunta_id': data[0][5]
             }
             js = json.dumps(resposta)
             return Response(js, status=200, mimetype='application/json')
@@ -715,20 +761,78 @@ def perguntas():
         pergunta = request.form["pergunta"]
         pergunta_sql = request.form["pergunta_sql"]
         query_id = request.form["query_id"]
+        # VERIFICA SE O SQL INSERIDO E VALIDO
+
+        # RECOLHE AS TABELAS INSERIDAS NA QUERY PARA COLOCAR NA TABELA "TABELA" DA BASE DE DADOS
+        mydb_cur = mysql.connection.cursor()
+        jg_teste_cur = MySQLdb.connect(host='localhost',
+                                         database='jg_teste',
+                                         user='root',
+                                         password='user')
+        cursor = jg_teste_cur.cursor()
+        # print("ACERCA DO CURSOR:", mydb_cur)
+        query = "EXPLAIN " + pergunta_sql.upper()
+        # print("QUERY:", query)
+        cursor.execute(query)
+        explain_prof = cursor.fetchall()
+        print("EXPLAIN ALUN")
+        print(explain_prof)
+        prof_tabela = []
+        for each_tabela in explain_prof:
+            prof_tabela.append(each_tabela[2])
+        # for each in prof_tabela:
+        #     each.upper()
+        print("#########################")
+        print("## TABELAS ENCONTRADAS ##")
+        print("#########################")
+        print("TABELAS ENCONTRADAS NA QUERY PROFESSOR")
+        print(prof_tabela)
+        
         # INSERE UM NOVA PERGUNTA DENTRO DA TABELA PERGUNTA
-        cur = mysql.connection.cursor()
+
         query = "INSERT INTO PERGUNTA (PERGUNTA, PERGUNTA_SQL,query_id) VALUES (%s,%s,%s);"
-        cur.execute(query, (pergunta, pergunta_sql, query_id))
+        mydb_cur.execute(query, (pergunta, pergunta_sql, query_id))
         mysql.connection.commit()
+        print("COMMIT DO INSERT PERGUNTA BEM EXECUTADO:")
         # SELECIONA O ULTIMO INDEX INSERIDO
-        cur.execute("SELECT LAST_INSERT_ID()")
-        data_last_inserted_id = cur.fetchall()
+        mydb_cur.execute("SELECT LAST_INSERT_ID();")
+        data_last_inserted_id = mydb_cur.fetchall()
         last_inserted_id = data_last_inserted_id[0][0]
+        pergunta_id = last_inserted_id
+
+        print("PERGUNTA ID (bem recolhido): ", pergunta_id)
+        # EFECTIVAMENTE COLOCA DENTRO DA TABELA "TABELA" A INFORMACAO RELATIVA AS TABELAS USADAS
+        # Para a lista calculada a cima necessita de remover os duplicados e ignorar as leituras com < ou > no seu conteudo
+        prof_tabela_tabela = prof_tabela
+        prof_tabela_tabela = list(dict.fromkeys(prof_tabela_tabela))
+        prof_tabela_tabela = [x for x in prof_tabela_tabela if not ("<" in x)]
+
+        print("LISTA DE TABELAS SEM REPETICOES E SUBQUERYS")
+
+        # Para a lista acima calculada verificar onde existe correspondencia com a lista anterior
+        # Recolher os ids das tabelas a serem usados
+        # para cada ID de tabela distinto inserir o ID completo de resposta composto por:
+        # resposta_Resposta_id
+        # resposta_Aluno_Aluno_id
+        # tabela_Tabela_id
+
+        for each_tabela in prof_tabela_tabela:
+            query = "SELECT TABELA_ID FROM TABELA WHERE NOME = %s"
+            mydb_cur.execute(query, (each_tabela,))
+            tabela_id = mydb_cur.fetchall()
+            tabela_id = tabela_id[0][0]
+            # print("TABELA_ID: ", tabela_id)
+            query = "INSERT INTO pergunta_has_tabela (pergunta_Pergunta_id, tabela_Tabela_id) VALUES (%s,%s);"
+            mydb_cur.execute(query, (pergunta_id,tabela_id))
+            mysql.connection.commit()
+            # print("COMIT DA PERGUNTA HAS TABELA DEVIDAMENTE EXECUTADO! PERGUNTA_ID", pergunta_id, " TABELA_ID", tabela_id)
+
         query = "SELECT PERGUNTA_ID, PERGUNTA,PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID = %s;"
         # COLOCA O ULTIMO INDEX INSERIDO DENTRO DE UMA QUERY
-        cur.execute(query, (last_inserted_id,))
-        data = cur.fetchall()
-        cur.close()
+        mydb_cur.execute(query, (pergunta_id,))
+        data = mydb_cur.fetchall()
+
+        mydb_cur.close()
         js = json.dumps(data)
         resp = Response(js, status=200, mimetype='application/json')
         resp.headers['Links'] = 'http://127.0.0.1/perguntas/'
@@ -831,7 +935,7 @@ def resultados():
     # form = ResultadoForm(request.form)
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        cur.execute('SELECT resultado_id, numero_linhas_iguais, numero_linhas_totais, numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id FROM resultado;')
+        cur.execute('SELECT resultado_id, numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais, Pergunta_Pergunta_id FROM resultado;')
         data = cur.fetchall()
         cur.close()
         if len(data) <= 0:
@@ -844,15 +948,9 @@ def resultados():
                     'resultado_id': elm[0],
                     'numero_linhas_iguais': elm[1],
                     'numero_linhas_totais': elm[2],
-                    'numero_colunas_iguais': elm[3],
-                    'colunas_totais': elm[4],
-                    'colunas_iguais': elm[5],
-                    'campos_totais': elm[6],
-                    'campos_iguais': elm[7],
-                    'pergunta_pergunta_id': elm[8],
-                    'resposta_resposta_id': elm[9],
-                    'resposta_aluno_aluno_id': elm[10],
-                    'resposta_pergunta_pergunta_id': elm[11]
+                    'tabelas_totais': elm[3],
+                    'tabelas_iguais': elm[4],
+                    'Pergunta_Pergunta_id': elm[5]
                 }
                 resultados.append(resultado)
             js = json.dumps(resultados)
@@ -864,27 +962,82 @@ def resultados():
 def resultados_update(resultado_id):
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        query = 'SELECT numero_linhas_iguais,numero_colunas_iguais,colunas_totais,colunas_iguais,campos_totais,campos_iguais,Pergunta_Pergunta_id,Resposta_Resposta_id,Resposta_Aluno_Aluno_id,Resposta_Pergunta_Pergunta_id FROM resultado WHERE RESULTADO_ID = %s;'
+        query = 'SELECT resultado_id, numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais, Pergunta_Pergunta_id FROM resultado WHERE RESULTADO_ID = %s;'
         cur.execute(query, (resultado_id,))
         data = cur.fetchall()
         if len(data) <= 0:
             return Response(status=404)
         else:
             resultado = {
-                'numero_linhas_iguais': data[0][0],
-                'numero_colunas_iguais': data[0][1],
-                'colunas_totais': data[0][2],
-                'colunas_iguais': data[0][3],
-                'campos_totais': data[0][4],
-                'campos_iguais': data[0][5],
-                'Pergunta_Pergunta_id': data[0][6],
-                'Resposta_Resposta_id': data[0][7],
-                'Resposta_Aluno_Aluno_id': data[0][8],
-                'Resposta_Pergunta_Pergunta_id': data[0][9]
+                'resultado_id': data[0][0],
+                'numero_linhas_iguais': data[0][1],
+                'numero_linhas_totais': data[0][2],
+                'tabelas_totais': data[0][3],
+                'tabelas_iguais': data[0][4],
+                'Pergunta_Pergunta_id': data[0][5]
             }
             js = json.dumps(resultado)
             return Response(js, status=200, mimetype='application/json')
 
+@app.route('/v1.0/pergunta_has_tabela/<int:pergunta_id>', methods=['GET'])
+def pergunta_has_tabela(pergunta_id):
+    if request.method == 'GET':
+        mydb_cur = mysql.connection.cursor()
+        query = 'SELECT pergunta_Pergunta_id, tabela_Tabela_id FROM pergunta_has_tabela WHERE pergunta_Pergunta_id = %s;'
+        mydb_cur.execute(query, (pergunta_id,))
+        data = mydb_cur.fetchall()
+        if len(data) <= 0:
+            return Response(status=404)
+        else:
+            pergunta_has_tabelas = []
+            
+            for elm in data:
+                pergunta_has_tabela = {
+                    'pergunta_Pergunta_id': elm[0],
+                    'tabela_Tabela_id': elm[1]
+                }
+                pergunta_has_tabelas.append(pergunta_has_tabela)
+            js = json.dumps(pergunta_has_tabelas)
+            return Response(js, status=200, mimetype='application/json')
+
+@app.route('/v1.0/resposta_has_tabela/<int:resposta_id>/<int:aluno_id>/<int:pergunta_id>/', methods=['GET'])
+def resposta_has_tabela(resposta_id, aluno_id, pergunta_id):
+    if request.method == 'GET':
+        mydb_cur = mysql.connection.cursor()
+        query = 'SELECT resposta_Resposta_id, resposta_Aluno_Aluno_id, resposta_Pergunta_Pergunta_id, tabela_Tabela_id FROM resposta_has_tabela WHERE resposta_Resposta_id = %s and resposta_Aluno_Aluno_id = %s and resposta_Pergunta_Pergunta_id = %s;'
+        mydb_cur.execute(query, (resposta_id, aluno_id, pergunta_id))
+        data = mydb_cur.fetchall()
+        if len(data) <= 0:
+            return Response(status=404)
+        else:
+            resposta_has_tabelas = []
+
+            for each in data:
+                resposta_has_tabela = {
+                    'resposta_Resposta_id': each[0],
+                    'resposta_Aluno_Aluno_id': each[1],
+                    'resposta_Pergunta_Pergunta_id': each[2],
+                    'tabela_Tabela_id': each[3]
+                }
+                resposta_has_tabelas.append(resposta_has_tabela)
+            js = json.dumps(resposta_has_tabelas)
+            return Response(js, status=200, mimetype='application/json')
+@app.route('/v1.0/tabela/<int:tabela_id>', methods=['GET'])
+def tabela(tabela_id):
+    if request.method == 'GET':
+        mydb_cur = mysql.connection.cursor()
+        query = 'SELECT tabela_id, nome FROM tabela WHERE tabela_id = %s;'
+        mydb_cur.execute(query, (tabela_id,))
+        data = mydb_cur.fetchall()
+        if len(data) <= 0:
+            return Response(status=404)
+        else:
+            tabela = {
+                'tabela_id': data[0][0],
+                'nome': data[0][1]
+            }
+            js = json.dumps(tabela)
+            return Response(js, status=200, mimetype='application/json')    
 
 @app.route('/v1.0/about')
 def about():
