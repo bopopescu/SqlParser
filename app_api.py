@@ -168,7 +168,7 @@ class PerguntaForm(Form):
 
 class RespostaForm(Form):
     resposta_sql = StringField(
-        'resposta_sql', [validators.Length(min=0, max=255)])
+        'resposta_sql', [validators.Length(min=0, max=1000)])
     aluno_aluno_id = IntegerField('aluno_aluno_id', [validators.required()])
     pergunta_pergunta_id = IntegerField('pergunta_pergunta_id', [validators.required()])
 
@@ -765,7 +765,7 @@ def resposta_update(resposta_id):
                                          password='user')
 
         # TESTAR SE O COMANDO SQL E EXECUTADO ATRAVES DO METODO EXPLAIN
-        resposta_sql_alun_explain = "EXPLAIN " + resposta_sql_alun
+        resposta_sql_alun_explain = "EXPLAIN " + resposta_sql
 
         cursor = jg_teste_cur.cursor()
 
@@ -786,12 +786,16 @@ def resposta_update(resposta_id):
             print("ERROR SOMETHING!!!")
             return Response(js, status=406, mimetype='application/json')
 
+        ####################################################################################
+        # AQUI MERECE UM TRY CATCH...
         # Estraiu os nomes das tabelas envolvidas "possivelmente" com duplicados
-        alun_tabela = extract_tables(resposta_sql_alun)
-        for each_elm in alun_tabela:
-            each_elm.upper()
+        alun_tabela = extract_tables(resposta_sql)
+        print("ALUNO_TABELA: ", alun_tabela)
+        alun_tabela = [x.upper() for x in alun_tabela]
         # REMOVE DUPLICADOS
+        #####################################################################################
         alun_tabela = list(dict.fromkeys(alun_tabela))
+        print("ALUNO_TABELA DEPOIS DE UPPER: ", alun_tabela)
 
         # Selecionar Qual a pergunta envolvida com determinada resposta
         query = "SELECT PERGUNTA_SQL, QUERY_ID FROM pergunta WHERE pergunta_id = %s"
@@ -814,6 +818,8 @@ def resposta_update(resposta_id):
             print("Each data prof tabela: ", new_data[0][0])
             prof_tabela.append(new_data[0][0])
         
+        ######################################################################################
+        # Remover Duplicados não existe necessáriamente necessidade disto parece-me
         prof_tabela = list(dict.fromkeys(prof_tabela))
 
         print("TABELA ALUNO: ", alun_tabela)
@@ -877,6 +883,30 @@ def resposta_update(resposta_id):
         query = "UPDATE RESPOSTA SET RESPOSTA_SQL=%s, numero_linhas_iguais=%s, numero_linhas_totais=%s, tabelas_totais=%s, tabelas_iguais=%s WHERE RESPOSTA_ID = %s;"
         mydb_cur.execute(query, (resposta_sql_alun, numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais, resposta_id))
         mysql.connection.commit()
+
+        print("Fez o commit com sucesso da resposta com update....")
+
+        # APAGAR TODAS AS REFERENCIAS ANTERIORES A TABELAS 
+        # DENTRO DA TABELA PERGUNTA_HAS_TABELA ELEMINAR TODAS AS REFERENCIAS A  PERGUNTA_ID
+        query = "DELETE FROM RESPOSTA_HAS_TABELA WHERE resposta_RESPOSTA_ID = %s;"
+        mydb_cur.execute(query, (resposta_id,))
+        mysql.connection.commit()
+
+        print("Fez o delete com sucesso da resposta com update....")
+
+        # REFAZER AS TABELAS ANTERIORES A TABELAS
+        for each_tabela in alun_tabela:
+            print("EACH_TABELA: ", each_tabela)
+            query = "SELECT TABELA_ID FROM TABELA WHERE NOME = %s;"
+            mydb_cur.execute(query, (each_tabela,))
+            tabela_id = mydb_cur.fetchall()
+            print(tabela_id)
+            tabela_id = tabela_id[0][0]
+            print("TABELA_ID: ", tabela_id)
+            query = "INSERT INTO RESPOSTA_HAS_TABELA (RESPOSTA_RESPOSTA_ID, tabela_Tabela_id) VALUES (%s,%s);"
+            mydb_cur.execute(query, (resposta_id,tabela_id))
+            mysql.connection.commit()
+            print("COMIT DA PERGUNTA HAS TABELA DEVIDAMENTE EXECUTADO! PERGUNTA_ID", pergunta_id, " TABELA_ID", tabela_id)
 
         # Mostrar devidamente o resultado resultante da alteração da resposta
         query = "SELECT resposta_id, RESPOSTA_SQL, aluno_aluno_id, pergunta_pergunta_id, numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
