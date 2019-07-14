@@ -56,11 +56,11 @@ with app.app_context():
         for each in data_show_tables:
             # print("EACH IN DATA_SHOW_TABLES:",each[0].upper())
             query = "SELECT TABELA_ID, NOME FROM TABELA WHERE NOME = %s;"
-            mydb_cur.execute(query, (each[0].upper(),))
+            mydb_cur.execute(query, (each[0],))
             data = mydb_cur.fetchall()
             if(len(data) == 0):
                 query = "INSERT INTO tabela (NOME) VALUES (%s);"
-                mydb_cur.execute(query, (each[0].upper(),))
+                mydb_cur.execute(query, (each[0],))
                 mysql.connection.commit()
 
 def acrescentar_id(query, id_):
@@ -362,7 +362,7 @@ def resposta_insert(pergunta_id, aluno_id):
         
         # Verifica a qualidade do SQL
         ###############################################################
-        resposta_sql_alun = resposta_sql_alun.upper()
+        #resposta_sql_alun = resposta_sql_alun.upper()
 
         print("RESPOSTA SQL ALUN")
         print(resposta_sql_alun)
@@ -420,8 +420,8 @@ def resposta_insert(pergunta_id, aluno_id):
         # PESQUISA O QUERY MYSQL DA PERGUNDA DO PROFESSOR
 
         alun_tabela = extract_tables(resposta_sql_alun)
-        for each_elm in alun_tabela:
-            each_elm.upper()
+        # for each_elm in alun_tabela:
+        #     each_elm.upper()
 
 
         query = "SELECT PERGUNTA_SQL,QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s"
@@ -433,15 +433,15 @@ def resposta_insert(pergunta_id, aluno_id):
         # Levanta Excepção
         resposta_sql_prof = data_prof[0][0]
         #resposta_sql_prof.upper()
-        query = "EXPLAIN " + resposta_sql_prof.upper()
-        print("QUERY EXPLAIN PROF")
-        print(query)
-        ########################################################################
-        # Noutro ponto da API a pergunta do professor tem que ser testada contra erros
-        cursor.execute(query)
-        explain_prof = cursor.fetchall()
-        print("EXPLAIN_PROF")
-        print(explain_prof)
+        # query = "EXPLAIN " + resposta_sql_prof#.upper()
+        # print("QUERY EXPLAIN PROF")
+        # print(query)
+        # ########################################################################
+        # # Noutro ponto da API a pergunta do professor tem que ser testada contra erros
+        # cursor.execute(query)
+        # explain_prof = cursor.fetchall()
+        # print("EXPLAIN_PROF")
+        # print(explain_prof)
         # ####################################################################################
         # prof_tabela = []
         # for each_tabela in explain_prof:
@@ -453,8 +453,8 @@ def resposta_insert(pergunta_id, aluno_id):
         ########################################################################
 
         prof_tabela = extract_tables(resposta_sql_prof)
-        for each_elm in prof_tabela:
-            each_elm.upper()
+        # for each_elm in prof_tabela:
+        #     each_elm.upper()
 
         # print("TABELAS ENCONTRADAS NA QUERY PROFESSOR - SEM REPETICAO")
         # prof_tabela = list(dict.fromkeys(prof_tabela))
@@ -482,11 +482,11 @@ def resposta_insert(pergunta_id, aluno_id):
         print("DATA PROF:", data_prof)
 
         sqlquery = data_prof[0][0]
-        sqlquery.upper()
+        # sqlquery.upper() 
 
         # PESQUISA O QUERY MYSQL DA RESPOSTA DO ALUNO
         sqlqueryal = resposta_sql_alun
-        sqlqueryal.upper()
+        # sqlqueryal.upper()
 
         # sqlparsed = sqlparse.parse(sqlquery)
 
@@ -754,7 +754,7 @@ def resposta_update(resposta_id):
     form = RespostaForm(request.form)
     if request.method == 'POST' and form.validate():
         resposta_sql = request.form["resposta_sql"]
-        resposta_sql_alun = resposta_sql.upper()
+        resposta_sql_alun = resposta_sql#.upper()
         pergunta_id = request.form["pergunta_pergunta_id"]
         aluno_id = request.form["aluno_aluno_id"]
         # INSERE NA BASE DE DADOS A NOVA RESPOSTA
@@ -791,7 +791,7 @@ def resposta_update(resposta_id):
         # Estraiu os nomes das tabelas envolvidas "possivelmente" com duplicados
         alun_tabela = extract_tables(resposta_sql)
         print("ALUNO_TABELA: ", alun_tabela)
-        alun_tabela = [x.upper() for x in alun_tabela]
+        #alun_tabela = [x.upper() for x in alun_tabela]
         # REMOVE DUPLICADOS
         #####################################################################################
         alun_tabela = list(dict.fromkeys(alun_tabela))
@@ -982,7 +982,7 @@ def perguntas():
                                          password='user')
         cursor = jg_teste_cur.cursor()
         # print("ACERCA DO CURSOR:", mydb_cur)
-        query = "EXPLAIN " + pergunta_sql.upper()
+        query = "EXPLAIN " + pergunta_sql#.upper()
         # print("QUERY:", query)
         try:
 
@@ -1015,9 +1015,15 @@ def perguntas():
         # print("TABELAS ENCONTRADAS NA QUERY PROFESSOR")
         # print(prof_tabela)
 
-        prof_tabela = extract_tables(pergunta_sql.upper())
+        ##################################################################################
+        # Novamente isto merece protecção
+        ##################################################################################
+        prof_tabela = extract_tables(pergunta_sql)#.upper())
         # INSERE UM NOVA PERGUNTA DENTRO DA TABELA PERGUNTA
 
+        ###################################################################################
+        # ISTO MERECE PROTECAO Suponhamos que o query_id nao se encontra na pergunta_sql
+        ###################################################################################
         query = "INSERT INTO PERGUNTA (PERGUNTA, PERGUNTA_SQL,query_id) VALUES (%s,%s,%s);"
         mydb_cur.execute(query, (pergunta, pergunta_sql, query_id))
         mysql.connection.commit()
@@ -1033,15 +1039,17 @@ def perguntas():
         # Para a lista calculada a cima necessita de remover os duplicados e ignorar as leituras com < ou > no seu conteudo
         prof_tabela_tabela = prof_tabela
         prof_tabela_tabela = list(dict.fromkeys(prof_tabela_tabela))
-        prof_tabela_tabela = [x for x in prof_tabela_tabela if not ("<" in x)]
+        ##############################################################################
+        # Do jeito que a aplicação esta isto nao e necessariamente necessario
+        ##############################################################################
+        # prof_tabela_tabela = [x for x in prof_tabela_tabela if not ("<" in x)]
 
         print("LISTA DE TABELAS SEM REPETICOES E SUBQUERYS")
 
         # Para a lista acima calculada verificar onde existe correspondencia com a lista anterior
         # Recolher os ids das tabelas a serem usados
         # para cada ID de tabela distinto inserir o ID completo de resposta composto por:
-        # resposta_Resposta_id
-        # resposta_Aluno_Aluno_id
+        # pergunta_Pergunta_ID
         # tabela_Tabela_id
 
         print(prof_tabela_tabela)
@@ -1097,7 +1105,7 @@ def pergunta_update(pergunta_id):
                                          password='user')
         cursor = jg_teste_cur.cursor()
         # print("ACERCA DO CURSOR:", mydb_cur)
-        query = "EXPLAIN " + pergunta_sql.upper()
+        query = "EXPLAIN " + pergunta_sql#.upper()
         # print("QUERY:", query)
         try:
 
@@ -1118,7 +1126,7 @@ def pergunta_update(pergunta_id):
 
         # JA COMEÇO A PENSAR NUMA FORMA DE PORTEGER ISTO E VERIFICAR SE AS TABELAS RECOLHIDAS
         # SE ENCONTRAM DENTRO DA TABELA "TABELA"
-        prof_tabela = extract_tables(pergunta_sql.upper())
+        prof_tabela = extract_tables(pergunta_sql)#.upper())
 
         prof_tabela_tabela = prof_tabela
         prof_tabela_tabela = list(dict.fromkeys(prof_tabela_tabela))
@@ -1287,27 +1295,15 @@ def tabela(tabela_id):
             js = json.dumps(tabela)
             return Response(js, status=200, mimetype='application/json')    
 
-@app.route('/v1.0/about')
-def about():
-    return render_template('about.html')
+# @app.route('/v1.0/about')
+# def about():
+#     return render_template('about.html')
 
 
 @app.errorhandler(404)
 def page_not_found(e):
     return 'This page was not found'
 
-
-@app.route('/')
-@app.route('/home')
-def home():
-    return render_template('home.html')
-
-
-@app.route('/teste/')
-def teste():
-    # dates = DataFrame(np.random.randn(6, 4), index=dates, columns=list('ABCD')
-
-    return '<h3>Teste</h3>'
 
 
 if __name__ == '__main__':
