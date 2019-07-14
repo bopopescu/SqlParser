@@ -1190,6 +1190,7 @@ def perguntas_update(pergunta_id):
         query = "SELECT PERGUNTA_ID, PERGUNTA, PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID=%s"
         cur.execute(query, (pergunta_id,))
         data = cur.fetchall()
+
         if len(data) <= 0:
             return Response(status=404)
         else:
