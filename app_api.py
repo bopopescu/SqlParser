@@ -33,7 +33,7 @@ app.config['MYSQL_PASSWORD'] = db['mysql_password']
 app.config['MYSQL_DB'] = db['mysql_db']
 
 mysql = MySQL(app)
-print("MYSQL: ",mysql)
+print("MYSQL: ", mysql)
 CORS(app)
 
 # ACRESCENTAR OS NOMES DAS BASE DE DADOS
@@ -47,82 +47,73 @@ cursor = jg_teste_cur_init.cursor()
 # print("MYSQL: ",mysql)
 # print("MYSQL CONNECTION: ",mysql.connection)
 with app.app_context():
-    mydb_cur = mysql.connection.cursor()
-    query = "SHOW TABLES;"
-    cursor.execute(query)
-    data_show_tables = cursor.fetchall()
-    # print(data_show_tables)
-    if(len(data_show_tables) > 0):
-        for each in data_show_tables:
-            # print("EACH IN DATA_SHOW_TABLES:",each[0].upper())
-            query = "SELECT TABELA_ID, NOME FROM TABELA WHERE NOME = %s;"
-            mydb_cur.execute(query, (each[0],))
-            data = mydb_cur.fetchall()
-            if(len(data) == 0):
-                query = "INSERT INTO tabela (NOME) VALUES (%s);"
-                mydb_cur.execute(query, (each[0],))
-                mysql.connection.commit()
+    a = 0
+
 
 def acrescentar_id(query, id_):
-        queryparsed = sqlparse.parse(query)
-        # print(queryparsed[0])
-        lista = list()
-        for each in queryparsed[0]:
-            if each.value == "SELECT":
-                lista.append(each.value)
-                lista.append(" ")
-                lista.append(id_+",")
-                print(''.join(lista))
-            else:
-                lista.append(each.value)
-        print(lista)
-        lista = ''.join(lista)
-        # print(lista)
-        return lista
+    queryparsed = sqlparse.parse(query)
+    # print(queryparsed[0])
+    lista = list()
+    for each in queryparsed[0]:
+        if each.value == "SELECT":
+            lista.append(each.value)
+            lista.append(" ")
+            lista.append(id_+",")
+            print(''.join(lista))
+        else:
+            lista.append(each.value)
+    print(lista)
+    lista = ''.join(lista)
+    # print(lista)
+    return lista
 
 
 def is_subselect(parsed):
-    #print(type(parsed),parsed)
+    # print(type(parsed),parsed)
     if not parsed.is_group:
         return False
-    #print("is_subselect",parsed, " ", not parsed.is_group, )#parsed.tokens)
-    if(isinstance(parsed,Identifier) or isinstance(parsed,Parenthesis)):
+    # print("is_subselect",parsed, " ", not parsed.is_group, )#parsed.tokens)
+    if(isinstance(parsed, Identifier) or isinstance(parsed, Parenthesis)):
         if(parsed.value.upper().find("(SELECT") == 0):
             return True
         else:
-    #for item in parsed[0]:
-        #print("Item",item, item.ttype, item.value.upper())
-        #print()
-        #print(item.ttype)
-        #print(item.value.upper())
-        #if item.ttype is DML and item.value.upper() == 'SELECT':
-            #return True
+        # for item in parsed[0]:
+            # print("Item",item, item.ttype, item.value.upper())
+            # print()
+            # print(item.ttype)
+            # print(item.value.upper())
+            # if item.ttype is DML and item.value.upper() == 'SELECT':
+            # return True
             return False
 
 # parsed = sqlparse.parse(sql)[0]
+
+
 def extract_from_part(parsed):
     from_seen = False
-    #print(parsed.value)
+    # print(parsed.value)
     if(parsed.value.upper().find("(SELECT") == 0):
-        parsed.value = parsed.value[parsed.value.find("(")+1:parsed.value.find(")")]
+        parsed.value = parsed.value[parsed.value.find(
+            "(")+1:parsed.value.find(")")]
         parsed = sqlparse.parse(parsed.value)[0]
-    #print(parsed.value)
+    # print(parsed.value)
     for item in parsed.tokens:
         if from_seen:
-            #print(item.ttype)
+            # print(item.ttype)
             if is_subselect(item):
-                #print(item)
+                # print(item)
                 for x in extract_from_part(item):
-                    #print(x)
+                    # print(x)
                     yield x
-                #print("something")
+                # print("something")
             elif item.ttype is Keyword and (item.value.upper() == 'INNER JOIN' or item.value.upper() == 'JOIN'):
                 print("continue", item.value)
                 continue
-            elif item.ttype is Keyword:#and item.value.upper() != 'INNER JOIN' and item.value.upper() != 'JOIN':
+            # and item.value.upper() != 'INNER JOIN' and item.value.upper() != 'JOIN':
+            elif item.ttype is Keyword:
                 print("break", item.value)
                 break
-                #raise StopIteration
+                # raise StopIteration
             else:
                 yield item
         elif item.ttype is Keyword and item.value.upper() == 'FROM':
@@ -130,27 +121,55 @@ def extract_from_part(parsed):
 
 
 def extract_table_identifiers(token_stream):
-    
+
     for item in token_stream:
-        #print(type(item).__name__)
+        # print(type(item).__name__)
         if isinstance(item, IdentifierList):
             for identifier in item.get_identifiers():
-                yield identifier.get_real_name()#.get_name()
+                yield identifier.get_real_name()  # .get_name()
         elif isinstance(item, Identifier):
-            yield item.get_real_name()#.get_name()
+            yield item.get_real_name()  # .get_name()
         # It's a bug to check for Keyword here, but in the example
         # above some tables names are identified as keywords...
         elif item.ttype is Keyword:
-            
-            yield item.value#.value
+
+            yield item.value  # .value
 
 
 def extract_tables(sql):
     stream = extract_from_part(sqlparse.parse(sql)[0])
-    #print(dir(stream))
-    #print()
-    #print(sqlparse.parse(sql)[0][0])
+    # print(dir(stream))
+    # print()
+    # print(sqlparse.parse(sql)[0][0])
     return list(extract_table_identifiers(stream))
+
+    # funcao para ordenar uma lista
+def ordena_lista(list1):
+    list1 = sorted(list1, key=lambda name: str(name).lower())
+    return list1
+
+    # funcao para determinar o hashcode de uma lista
+def hashcode_lista(list1):
+    hashcode = hash(tuple(list1))
+    return hashcode
+
+# Neste momento ja cada dataframe tem uma coluna hash que permite diferenciar cada linha unicamente
+# o que é necessário agora é um algoritmo que a medida que se for criando um id
+# se vá acrescentando a um lista os valores de hash ja utilizados associados ao id
+# na verdade nao sera uma lista na medida em que para casa hash code estara tambem associado um ID
+# ou talvez se use uma lista con os hash codes ja utilizados e a medida que se vao criando os IDs
+# vao se tambem criando a estrutura relacionar ID->hash Code
+def acrescenta_id_data_frames(data_frame1, data_frame2):
+    data_frame1['hash'] = pandas.Series(
+        (((list(row))) for _, row in data_frame1.iterrows()))
+    data_frame2['hash'] = pandas.Series(
+        (((list(row))) for _, row in data_frame2.iterrows()))
+
+    data_frame1['hash'] = data_frame1['hash'].apply(ordena_lista)
+    data_frame1['hash'] = data_frame1['hash'].apply(hashcode_lista)
+
+    data_frame2['hash'] = data_frame2['hash'].apply(ordena_lista)
+    data_frame2['hash'] = data_frame2['hash'].apply(hashcode_lista)
 
 
 class AlunoForm(Form):
@@ -163,14 +182,16 @@ class PerguntaForm(Form):
     pergunta = StringField('pergunta', [validators.Length(min=15, max=1000)])
     pergunta_sql = StringField(
         'pergunta_sql', [validators.Length(min=12, max=1000)])
-    query_id = StringField('query_id', [validators.Length(min=2, max=45)])
+    ficha_Ficha_id = IntegerField('ficha_Ficha_id', [validators.required()])
 
 
 class RespostaForm(Form):
     resposta_sql = StringField(
         'resposta_sql', [validators.Length(min=0, max=1000)])
     aluno_aluno_id = IntegerField('aluno_aluno_id', [validators.required()])
-    pergunta_pergunta_id = IntegerField('pergunta_pergunta_id', [validators.required()])
+    pergunta_pergunta_id = IntegerField(
+        'pergunta_pergunta_id', [validators.required()])
+
 
 @app.route('/v1.0/alunos/', methods=['POST', 'GET'])
 def alunos():
@@ -347,22 +368,34 @@ def resposta_insert(pergunta_id, aluno_id):
         # VERIFICA SE OS FORMULARIOS ESTAO BEM FEITOS
         # Caso nao estejam bem feito levanta uma excepcao
         resposta_sql = request.form["resposta_sql"]
-
         resposta_sql_alun = resposta_sql
         # INSERE NA BASE DE DADOS A NOVA RESPOSTA
         mydb_cur = mysql.connection.cursor()
+        # Recolhe a base de dados a ser utilizada
+        # Primeiro recolhe a ficha_Ficha_id 
+        # Segundo relaciona ficha_Ficha_id com a tabela 'ficha'
+        query = "SELECT ficha_Ficha_id From pergunta Where Pergunta_id = %s;"
+        mydb_cur.execute(query, (pergunta_id,))
+        data_prof = mydb_cur.fetchall()
+        database_id = data_prof[0][0]
+
+        query = "SELECT BaseDeDados From ficha Where Ficha_id = %s;"
+        mydb_cur.execute(query, (database_id,))
+        data_prof = mydb_cur.fetchall()
+        database = data_prof[0][0]
+
         jg_teste_cur = MySQLdb.connect(host='localhost',
-                                         database='jg_teste',
-                                         user='root',
-                                         password='user')
+                                       database=database,
+                                       user='root',
+                                       password='user')
         print("MYDB_CUR")
         print(mydb_cur)
         print("JG_TESTE_CUR")
         print(jg_teste_cur)
-        
+
         # Verifica a qualidade do SQL
         ###############################################################
-        #resposta_sql_alun = resposta_sql_alun.upper()
+        # resposta_sql_alun = resposta_sql_alun.upper()
 
         print("RESPOSTA SQL ALUN")
         print(resposta_sql_alun)
@@ -370,7 +403,7 @@ def resposta_insert(pergunta_id, aluno_id):
         # Verifica se as tabelas utilizadas são as mesmas
         # Caso não seja manda uma excepção
         query = "EXPLAIN " + resposta_sql_alun
-        
+
         print("QUERY EXPLAIN")
         print(query)
         # Verificia se o cursor pode ser criado
@@ -378,7 +411,7 @@ def resposta_insert(pergunta_id, aluno_id):
         cursor = jg_teste_cur.cursor()
         print("CURSOR")
         print(cursor)
-        # Verifica se o comando pode ser executado 
+        # Verifica se o comando pode ser executado
         # Caso não seja levanta uma excepção
         try:
 
@@ -397,7 +430,7 @@ def resposta_insert(pergunta_id, aluno_id):
             print("ERROR SOMETHING!!!")
             return Response(js, status=406, mimetype='application/json')
 
-        # Verifica se o comando pode ser executado 
+        # Verifica se o comando pode ser executado
         # Caso não seja levanta uma excepção
         ###########################################################################
         # explain_alun = cursor.fetchall()
@@ -423,16 +456,15 @@ def resposta_insert(pergunta_id, aluno_id):
         # for each_elm in alun_tabela:
         #     each_elm.upper()
 
-
-        query = "SELECT PERGUNTA_SQL,QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s"
+        query = "SELECT PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID = %s"
         mydb_cur.execute(query, (pergunta_id,))
         data_prof = mydb_cur.fetchall()
         print("DATA_PROF")
         print(data_prof)
-        # VERIFICA TAMANHO data_prof 
-        # Levanta Excepção
+        # VERIFICA TAMANHO data_prof
+        # Levanta Excepção ??? devera?
         resposta_sql_prof = data_prof[0][0]
-        #resposta_sql_prof.upper()
+        # resposta_sql_prof.upper()
         # query = "EXPLAIN " + resposta_sql_prof#.upper()
         # print("QUERY EXPLAIN PROF")
         # print(query)
@@ -463,8 +495,8 @@ def resposta_insert(pergunta_id, aluno_id):
         join_alun_prof_tabela = set(alun_tabela) & set(prof_tabela)
         print("JOIN TABELAS ALUNO E PROFESSOR:", join_alun_prof_tabela)
 
-        ################## if(len(join_alun_prof_tabela) == 0):
-            
+        # if(len(join_alun_prof_tabela) == 0):
+
         # # Insere a resposta no lugar certo da base de dados
         # query = "INSERT INTO resposta (pergunta_pergunta_id, aluno_aluno_id, resposta_sql) VALUES (%s,%s,%s);"
         # mydb_cur.execute(query, (pergunta_id, aluno_id, resposta_sql))
@@ -476,13 +508,13 @@ def resposta_insert(pergunta_id, aluno_id):
         # PREPARA ESTRUTURA PARA COMPARACAO DE TABELAS VIA MYSQL AND DATASETS
 
         # PESQUISA O QUERY MYSQL DA PERGUNDA DO PROFESSOR
-        query = "SELECT PERGUNTA_SQL,QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s"
+        query = "SELECT PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID = %s"
         mydb_cur.execute(query, (pergunta_id,))
         data_prof = mydb_cur.fetchall()
         print("DATA PROF:", data_prof)
 
         sqlquery = data_prof[0][0]
-        # sqlquery.upper() 
+        # sqlquery.upper()
 
         # PESQUISA O QUERY MYSQL DA RESPOSTA DO ALUNO
         sqlqueryal = resposta_sql_alun
@@ -491,13 +523,10 @@ def resposta_insert(pergunta_id, aluno_id):
         # sqlparsed = sqlparse.parse(sqlquery)
 
         # DETERMINA A PARTIR DA TABELA PERGUNTA O QUERY ID A SER UTILIZADO
-        sqlquerykey = data_prof[0][1]
 
         print()
         # import mysql.connector
 
-        print("IMPRIME A DATA_FRAME_KEY: ", sqlquerykey)
-        print("CHAVE: ", sqlquerykey)
         sqlqueryprof = sqlquery
         print("SQL QUERY DO PROFESSOR: ", sqlqueryprof)
         sqlqueryalun = sqlqueryal
@@ -539,7 +568,7 @@ def resposta_insert(pergunta_id, aluno_id):
 
         # print("#################################################################")
         # EXECUTAR CADA UMA DAS QUERYS
-        
+
         # cursor.execute(sqlqueryprof)
         # records_prof = cursor.fetchall()
 
@@ -568,13 +597,21 @@ def resposta_insert(pergunta_id, aluno_id):
         print("DATA SET DO AUNO:")
         print(data_alun)
 
+        acrescenta_id_data_frames(data_prof, data_alun)
+
+        print("##########################################################")
+        print("# Data Frame Professor e Aluno depois de passarem por acrescenta_id_data_frames")
+        print("Data Professor ")
+        print(data_prof)
+        print("Data Aluno")
+        print(data_alun)
         # datacompy
         # VERIFICAR SE DESPOLTA ERROS
         # CASO VERDADEIRO LEVANTA EXCEPÇÃO
         compare = datacompy.Compare(
             data_prof,
             data_alun,
-            join_columns=sqlquerykey)
+            join_columns='hash')
 
         # IMPRIMIR RESULTADOS DA COMPARACAO ##
         ######################################
@@ -634,8 +671,9 @@ def resposta_insert(pergunta_id, aluno_id):
 
         # Insere a resposta no lugar certo da base de dados
         query = "INSERT INTO resposta (Resposta_sql, Aluno_Aluno_id, Pergunta_Pergunta_id, numero_linhas_totais, numero_linhas_iguais, tabelas_totais, tabelas_iguais ) VALUES (%s,%s,%s,%s,%s,%s,%s);"
-        #query = "INSERT INTO `resposta`(`Resposta_sql`,`Aluno_Aluno_id`,`Pergunta_Pergunta_id`,`resultado_Resultado_id`,`resultado_Pergunta_Pergunta_id`) VALUES (%s,%s,%s,%s,%s);"
-        mydb_cur.execute(query, (resposta_sql, aluno_id, pergunta_id,  numero_linhas_totais, numero_linhas_iguais, tabelas_totais, tabelas_iguais))
+        # query = "INSERT INTO `resposta`(`Resposta_sql`,`Aluno_Aluno_id`,`Pergunta_Pergunta_id`,`resultado_Resultado_id`,`resultado_Pergunta_Pergunta_id`) VALUES (%s,%s,%s,%s,%s);"
+        mydb_cur.execute(query, (resposta_sql, aluno_id, pergunta_id,
+                         numero_linhas_totais, numero_linhas_iguais, tabelas_totais, tabelas_iguais))
         mysql.connection.commit()
 
         print("COMIT RESPOSTA BEM EXECUTADO")
@@ -647,28 +685,12 @@ def resposta_insert(pergunta_id, aluno_id):
         print("RESPOSTA_ID:", resposta_id)
 
         # INSERE PARA CADA RESPOSTA AS TABELAS ENCONTRADAS CORRESPONDENTES NA BASE DE DADOS
-        # 
+        #
         # Para a lista calculada a cima necessita de remover os duplicados e ignorar as leituras com < ou > no seu conteudo
         alun_tabela_tabela = alun_tabela
         alun_tabela_tabela = list(dict.fromkeys(alun_tabela_tabela))
         ############################################################################################
         # alun_tabela_tabela = [x for x in alun_tabela_tabela if not ("<" in x)]
-
-        # Para a lista acima calculada verificar onde existe correspondencia com a lista anterior
-        # Recolher os ids das tabelas a serem usados
-        # para cada ID de tabela distinto inserir o ID completo de resposta composto por:
-        # resposta_Resposta_id
-        # resposta_Aluno_Aluno_id
-        # tabela_Tabela_id
-
-        for each_tabela in alun_tabela_tabela:
-            query = "SELECT TABELA_ID FROM TABELA WHERE NOME = %s;"
-            mydb_cur.execute(query, (each_tabela,))
-            tabela_id = mydb_cur.fetchall()
-            tabela_id = tabela_id[0][0]
-            query = "INSERT INTO resposta_has_tabela (resposta_Resposta_id, tabela_Tabela_id) VALUES (%s,%s);"
-            mydb_cur.execute(query, (resposta_id,tabela_id))
-            mysql.connection.commit()
 
         # SELECIONA A RESPOSTA ANTERIORMENTE INSERIDA
         query = "SELECT RESPOSTA_SQL, ALUNO_ALUNO_ID, PERGUNTA_PERGUNTA_ID, NUMERO_LINHAS_IGUAIS, NUMERO_LINHAS_TOTAIS, TABELAS_TOTAIS, TABELAS_IGUAIS FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
@@ -754,15 +776,27 @@ def resposta_update(resposta_id):
     form = RespostaForm(request.form)
     if request.method == 'POST' and form.validate():
         resposta_sql = request.form["resposta_sql"]
-        resposta_sql_alun = resposta_sql#.upper()
+        resposta_sql_alun = resposta_sql  # .upper()
         pergunta_id = request.form["pergunta_pergunta_id"]
         aluno_id = request.form["aluno_aluno_id"]
         # INSERE NA BASE DE DADOS A NOVA RESPOSTA
         mydb_cur = mysql.connection.cursor()
+        # Recolhe a base de dados a ser utilizada
+        # Primeiro recolhe a ficha_Ficha_id 
+        # Segundo relaciona ficha_Ficha_id com a tabela 'ficha'
+        query = "SELECT ficha_Ficha_id From pergunta Where Pergunta_id = %s;"
+        mydb_cur.execute(query, (pergunta_id,))
+        data_prof = mydb_cur.fetchall()
+        database_id = data_prof[0][0]
+
+        query = "SELECT BaseDeDados From ficha Where Ficha_id = %s;"
+        mydb_cur.execute(query, (database_id,))
+        data_prof = mydb_cur.fetchall()
+        database = data_prof[0][0]
         jg_teste_cur = MySQLdb.connect(host='localhost',
-                                         database='jg_teste',
-                                         user='root',
-                                         password='user')
+                                       database=database,
+                                       user='root',
+                                       password='user')
 
         # TESTAR SE O COMANDO SQL E EXECUTADO ATRAVES DO METODO EXPLAIN
         resposta_sql_alun_explain = "EXPLAIN " + resposta_sql
@@ -791,40 +825,24 @@ def resposta_update(resposta_id):
         # Estraiu os nomes das tabelas envolvidas "possivelmente" com duplicados
         alun_tabela = extract_tables(resposta_sql)
         print("ALUNO_TABELA: ", alun_tabela)
-        #alun_tabela = [x.upper() for x in alun_tabela]
+        # alun_tabela = [x.upper() for x in alun_tabela]
         # REMOVE DUPLICADOS
         #####################################################################################
         alun_tabela = list(dict.fromkeys(alun_tabela))
         print("ALUNO_TABELA DEPOIS DE UPPER: ", alun_tabela)
 
         # Selecionar Qual a pergunta envolvida com determinada resposta
-        query = "SELECT PERGUNTA_SQL, QUERY_ID FROM pergunta WHERE pergunta_id = %s"
+        query = "SELECT PERGUNTA_SQL FROM pergunta WHERE pergunta_id = %s"
         mydb_cur.execute(query, (pergunta_id,))
         data = mydb_cur.fetchall()
         resposta_sql_prof = data[0][0]
-        query_id = data[0][1]
-
-        # Selecionar as tabelas envolvidas para determinada pergunta
-        query = "SELECT pergunta_Pergunta_id, tabela_Tabela_id from pergunta_has_tabela where pergunta_Pergunta_id = %s"
-        mydb_cur.execute(query, (pergunta_id,))
-        data = mydb_cur.fetchall()
-        
-        # Das tabelas envolvidas fazer uma lista 
-        prof_tabela = []
-        for each in data:
-            query = "SELECT nome from tabela where tabela_id = %s"
-            mydb_cur.execute(query,(each[1],))
-            new_data = mydb_cur.fetchall()
-            print("Each data prof tabela: ", new_data[0][0])
-            prof_tabela.append(new_data[0][0])
-        
         ######################################################################################
         # Remover Duplicados não existe necessáriamente necessidade disto parece-me
-        prof_tabela = list(dict.fromkeys(prof_tabela))
+        prof_tabela = list(dict.fromkeys(extract_tables(resposta_sql_prof)))
 
         print("TABELA ALUNO: ", alun_tabela)
         print("TABELA PROFESSOR: ", prof_tabela)
-        # Com a lista das tabelas envolvidas na pergunta produzir 
+        # Com a lista das tabelas envolvidas na pergunta produzir
         # O numero de tabelas_totais e tabelas_iguais
         tabelas_totais = len(prof_tabela)
 
@@ -832,7 +850,7 @@ def resposta_update(resposta_id):
 
         if tabelas_iguais == 0:
             return Response(status=406)
-        
+
         #########################################################################################
         # Fazer devidamente a comparação dos dois data frames resultantes das querys aluno e professor envolvidas
         data_prof = pandas.read_sql(resposta_sql_prof, con=jg_teste_cur)
@@ -843,16 +861,26 @@ def resposta_update(resposta_id):
         print("DATA SET DO PROFESSOR:")
         print(data_prof)
         print("##################################################")
-        print("DATA SET DO AUNO:")
+        print("DATA SET DO ALUNO:")
         print(data_alun)
 
+        acrescenta_id_data_frames(data_prof, data_alun)
+
+        print("##########################################################")
+        print("# Data Frame Professor e Aluno depois de passarem por acrescenta_id_data_frames")
+        print("Data Professor ")
+        print(data_prof)
+        print("Data Aluno")
+        print(data_alun)
+
+        # return Response(status=501)
         # datacompy
         # VERIFICAR SE DESPOLTA ERROS
         # CASO VERDADEIRO LEVANTA EXCEPÇÃO
         compare = datacompy.Compare(
             data_prof,
             data_alun,
-            join_columns=query_id)
+            join_columns='hash')
 
         # IMPRIMIR RESULTADOS DA COMPARACAO ##
         ######################################
@@ -877,36 +905,14 @@ def resposta_update(resposta_id):
         numero_linhas_iguais = compare.intersect_rows.shape[0]
         print("NUMERO DE LINHAS IGUAIS: ", numero_linhas_iguais)
 
-
         # Fazer devidamente o update da nova resposta a ser actualizada em BD
 
         query = "UPDATE RESPOSTA SET RESPOSTA_SQL=%s, numero_linhas_iguais=%s, numero_linhas_totais=%s, tabelas_totais=%s, tabelas_iguais=%s WHERE RESPOSTA_ID = %s;"
-        mydb_cur.execute(query, (resposta_sql_alun, numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais, resposta_id))
+        mydb_cur.execute(query, (resposta_sql_alun, numero_linhas_iguais,
+                         numero_linhas_totais, tabelas_totais, tabelas_iguais, resposta_id))
         mysql.connection.commit()
 
         print("Fez o commit com sucesso da resposta com update....")
-
-        # APAGAR TODAS AS REFERENCIAS ANTERIORES A TABELAS 
-        # DENTRO DA TABELA PERGUNTA_HAS_TABELA ELEMINAR TODAS AS REFERENCIAS A  PERGUNTA_ID
-        query = "DELETE FROM RESPOSTA_HAS_TABELA WHERE resposta_RESPOSTA_ID = %s;"
-        mydb_cur.execute(query, (resposta_id,))
-        mysql.connection.commit()
-
-        print("Fez o delete com sucesso da resposta com update....")
-
-        # REFAZER AS TABELAS ANTERIORES A TABELAS
-        for each_tabela in alun_tabela:
-            print("EACH_TABELA: ", each_tabela)
-            query = "SELECT TABELA_ID FROM TABELA WHERE NOME = %s;"
-            mydb_cur.execute(query, (each_tabela,))
-            tabela_id = mydb_cur.fetchall()
-            print(tabela_id)
-            tabela_id = tabela_id[0][0]
-            print("TABELA_ID: ", tabela_id)
-            query = "INSERT INTO RESPOSTA_HAS_TABELA (RESPOSTA_RESPOSTA_ID, tabela_Tabela_id) VALUES (%s,%s);"
-            mydb_cur.execute(query, (resposta_id,tabela_id))
-            mysql.connection.commit()
-            print("COMIT DA PERGUNTA HAS TABELA DEVIDAMENTE EXECUTADO! PERGUNTA_ID", pergunta_id, " TABELA_ID", tabela_id)
 
         # Mostrar devidamente o resultado resultante da alteração da resposta
         query = "SELECT resposta_id, RESPOSTA_SQL, aluno_aluno_id, pergunta_pergunta_id, numero_linhas_iguais, numero_linhas_totais, tabelas_totais, tabelas_iguais FROM RESPOSTA WHERE RESPOSTA_ID = %s;"
@@ -950,7 +956,7 @@ def perguntas():
     form = PerguntaForm(request.form)
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        cur.execute("SELECT PERGUNTA_ID, PERGUNTA,PERGUNTA_SQL, QUERY_ID FROM PERGUNTA;")
+        cur.execute("SELECT PERGUNTA_ID, PERGUNTA,PERGUNTA_SQL,ficha_Ficha_id FROM PERGUNTA;")
         data = cur.fetchall()
         cur.close()
 
@@ -961,7 +967,7 @@ def perguntas():
                 'pergunta_id': elm[0],
                 'pergunta': elm[1],
                 'pergunta_sql': elm[2],
-                'query_id': elm[3]
+                'ficha_Ficha_id': elm[3]
             }
             perguntas.append(pergunta)
 
@@ -971,18 +977,24 @@ def perguntas():
         # RECEBE OS DADOS DO REQUEST
         pergunta = request.form["pergunta"]
         pergunta_sql = request.form["pergunta_sql"]
-        query_id = request.form["query_id"]
+        ficha_Ficha_id = request.form["ficha_Ficha_id"]
         # VERIFICA SE O SQL INSERIDO E VALIDO
 
         # RECOLHE AS TABELAS INSERIDAS NA QUERY PARA COLOCAR NA TABELA "TABELA" DA BASE DE DADOS
         mydb_cur = mysql.connection.cursor()
+        #
+        query = "SELECT BaseDeDados From ficha Where Ficha_id = %s;"
+        mydb_cur.execute(query, (ficha_Ficha_id,))
+        data_prof = mydb_cur.fetchall()
+        database = data_prof[0][0]
+
         jg_teste_cur = MySQLdb.connect(host='localhost',
-                                         database='jg_teste',
-                                         user='root',
-                                         password='user')
+                                       database=database,
+                                       user='root',
+                                       password='user')
         cursor = jg_teste_cur.cursor()
         # print("ACERCA DO CURSOR:", mydb_cur)
-        query = "EXPLAIN " + pergunta_sql#.upper()
+        query = "EXPLAIN " + pergunta_sql  # .upper()
         # print("QUERY:", query)
         try:
 
@@ -1000,7 +1012,7 @@ def perguntas():
             print(js)
             print("ERROR SOMETHING!!!")
             return Response(js, status=406, mimetype='application/json')
-        #explain_prof = cursor.fetchall()
+        # explain_prof = cursor.fetchall()
         #######################################################################
         # print("EXPLAIN ALUN")
         # print(explain_prof)
@@ -1018,7 +1030,7 @@ def perguntas():
         ##################################################################################
         # Novamente isto merece protecção
         ##################################################################################
-        prof_tabela = extract_tables(pergunta_sql)#.upper())
+        prof_tabela = extract_tables(pergunta_sql)  # .upper())
         # INSERE UM NOVA PERGUNTA DENTRO DA TABELA PERGUNTA
 
         ###################################################################################
@@ -1065,11 +1077,12 @@ def perguntas():
             tabela_id = tabela_id[0][0]
             print("TABELA_ID: ", tabela_id)
             query = "INSERT INTO pergunta_has_tabela (pergunta_Pergunta_id, tabela_Tabela_id) VALUES (%s,%s);"
-            mydb_cur.execute(query, (pergunta_id,tabela_id))
+            mydb_cur.execute(query, (pergunta_id, tabela_id))
             mysql.connection.commit()
-            print("COMIT DA PERGUNTA HAS TABELA DEVIDAMENTE EXECUTADO! PERGUNTA_ID", pergunta_id, " TABELA_ID", tabela_id)
+            print("COMIT DA PERGUNTA HAS TABELA DEVIDAMENTE EXECUTADO! PERGUNTA_ID",
+                  pergunta_id, " TABELA_ID", tabela_id)
 
-        query = "SELECT PERGUNTA_ID, PERGUNTA,PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s;"
+        query = "SELECT PERGUNTA_ID, PERGUNTA,PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID = %s;"
         # COLOCA O ULTIMO INDEX INSERIDO DENTRO DE UMA QUERY
         mydb_cur.execute(query, (pergunta_id,))
         data = mydb_cur.fetchall()
@@ -1097,15 +1110,21 @@ def pergunta_update(pergunta_id):
     if request.method == 'POST' and form.validate():
         pergunta = request.form["pergunta"]
         pergunta_sql = request.form["pergunta_sql"]
-        query_id = request.form["query_id"]
+        ficha_Ficha_id = request.form["ficha_Ficha_id"]
         mydb_cur = mysql.connection.cursor()
+        #
+        query = "SELECT BaseDeDados From ficha Where Ficha_id = %s;"
+        mydb_cur.execute(query, (ficha_Ficha_id,))
+        data_prof = mydb_cur.fetchall()
+        database = data_prof[0][0]
+
         jg_teste_cur = MySQLdb.connect(host='localhost',
-                                         database='jg_teste',
-                                         user='root',
-                                         password='user')
+                                       database=database,
+                                       user='root',
+                                       password='user')
         cursor = jg_teste_cur.cursor()
         # print("ACERCA DO CURSOR:", mydb_cur)
-        query = "EXPLAIN " + pergunta_sql#.upper()
+        query = "EXPLAIN " + pergunta_sql  # .upper()
         # print("QUERY:", query)
         try:
 
@@ -1126,38 +1145,19 @@ def pergunta_update(pergunta_id):
 
         # JA COMEÇO A PENSAR NUMA FORMA DE PORTEGER ISTO E VERIFICAR SE AS TABELAS RECOLHIDAS
         # SE ENCONTRAM DENTRO DA TABELA "TABELA"
-        prof_tabela = extract_tables(pergunta_sql)#.upper())
+        prof_tabela = extract_tables(pergunta_sql)  # .upper())
 
         prof_tabela_tabela = prof_tabela
         prof_tabela_tabela = list(dict.fromkeys(prof_tabela_tabela))
-        #prof_tabela_tabela = [x for x in prof_tabela_tabela if not ("<" in x)]
+        # prof_tabela_tabela = [x for x in prof_tabela_tabela if not ("<" in x)]
         ###########################################################################
         print("LISTA DE TABELAS SEM REPETICOES E SUBQUERYS")
 
-        query = "UPDATE PERGUNTA SET PERGUNTA=%s, PERGUNTA_SQL=%s, QUERY_ID=%s WHERE PERGUNTA_ID = %s;"
-        mydb_cur.execute(query, (pergunta, pergunta_sql, query_id, pergunta_id))
+        query = "UPDATE PERGUNTA SET PERGUNTA=%s, PERGUNTA_SQL=%s WHERE PERGUNTA_ID = %s;"
+        mydb_cur.execute(query, (pergunta, pergunta_sql, pergunta_id))
         mysql.connection.commit()
 
-        # APAGAR TODAS AS REFERENCIAS ANTERIORES A TABELAS 
-        # DENTRO DA TABELA PERGUNTA_HAS_TABELA ELEMINAR TODAS AS REFERENCIAS A  PERGUNTA_ID
-        query = "DELETE FROM PERGUNTA_HAS_TABELA WHERE PERGUNTA_PERGUNTA_ID = %s;"
-        mydb_cur.execute(query, (pergunta_id,))
-        mysql.connection.commit()
-        # REFAZER AS TABELAS ANTERIORES A TABELAS
-        for each_tabela in prof_tabela_tabela:
-            print("EACH_TABELA: ", each_tabela)
-            query = "SELECT TABELA_ID FROM TABELA WHERE NOME = %s;"
-            mydb_cur.execute(query, (each_tabela,))
-            tabela_id = mydb_cur.fetchall()
-            print(tabela_id)
-            tabela_id = tabela_id[0][0]
-            print("TABELA_ID: ", tabela_id)
-            query = "INSERT INTO pergunta_has_tabela (pergunta_Pergunta_id, tabela_Tabela_id) VALUES (%s,%s);"
-            mydb_cur.execute(query, (pergunta_id,tabela_id))
-            mysql.connection.commit()
-            print("COMIT DA PERGUNTA HAS TABELA DEVIDAMENTE EXECUTADO! PERGUNTA_ID", pergunta_id, " TABELA_ID", tabela_id)
-
-        query = "SELECT PERGUNTA, PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID = %s"
+        query = "SELECT PERGUNTA, PERGUNTA_SQL FROM PERGUNTA WHERE PERGUNTA_ID = %s"
         mydb_cur.execute(query, (pergunta_id,))
         data = mydb_cur.fetchall()
         mydb_cur.close()
@@ -1187,7 +1187,7 @@ def perguntas_update(pergunta_id):
     form = PerguntaForm(request.form)
     if request.method == 'GET':
         cur = mysql.connection.cursor()
-        query = "SELECT PERGUNTA_ID, PERGUNTA, PERGUNTA_SQL, QUERY_ID FROM PERGUNTA WHERE PERGUNTA_ID=%s"
+        query = "SELECT PERGUNTA_ID, PERGUNTA, PERGUNTA_SQL,ficha_Ficha_id FROM PERGUNTA WHERE PERGUNTA_ID=%s"
         cur.execute(query, (pergunta_id,))
         data = cur.fetchall()
 
@@ -1199,7 +1199,7 @@ def perguntas_update(pergunta_id):
                 'pergunta_id': data[0][0],
                 'pergunta': data[0][1],
                 'pergunta_sql': data[0][2],
-                'query_id': data[0][3]
+                'ficha_Ficha_id': data[0][3]
             }
 
             print(json.dumps(pergunta))
@@ -1233,69 +1233,6 @@ def perguntas_update(pergunta_id):
     #     cur.fetchall()
     #     return Response(status=200)
 
-
-@app.route('/v1.0/pergunta_has_tabela/<int:pergunta_id>', methods=['GET'])
-def pergunta_has_tabela(pergunta_id):
-    if request.method == 'GET':
-        mydb_cur = mysql.connection.cursor()
-        query = 'SELECT pergunta_Pergunta_id, tabela_Tabela_id FROM pergunta_has_tabela WHERE pergunta_Pergunta_id = %s;'
-        mydb_cur.execute(query, (pergunta_id,))
-        data = mydb_cur.fetchall()
-        if len(data) <= 0:
-            return Response(status=404)
-        else:
-            pergunta_has_tabelas = []
-            
-            for elm in data:
-                pergunta_has_tabela = {
-                    'pergunta_Pergunta_id': elm[0],
-                    'tabela_Tabela_id': elm[1]
-                }
-                pergunta_has_tabelas.append(pergunta_has_tabela)
-            js = json.dumps(pergunta_has_tabelas)
-            return Response(js, status=200, mimetype='application/json')
-
-@app.route('/v1.0/resposta_has_tabela/<int:resposta_id>/', methods=['GET'])
-def resposta_has_tabela(resposta_id):
-    print("DATA RESPOSTA HAS TABELA ANTES DO GET: ")
-    if request.method == 'GET':
-        mydb_cur = mysql.connection.cursor()
-        query = 'SELECT resposta_Resposta_id, tabela_Tabela_id FROM resposta_has_tabela WHERE resposta_Resposta_id = %s;'
-        mydb_cur.execute(query, (resposta_id,))
-        data = mydb_cur.fetchall()
-        print("DATA RESPOSTA HAS TABELA DATA: ", data)
-        if len(data) <= 0:
-            return Response(status=404)
-        else:
-            resposta_has_tabelas = []
-
-            for each in data:
-                resposta_has_tabela = {
-                    'resposta_Resposta_id': each[0],
-                    'tabela_Tabela_id': each[1]
-                }
-                resposta_has_tabelas.append(resposta_has_tabela)
-            print("DATA RESPOSTA HAS TABELA JSON: ", data)    
-            js = json.dumps(resposta_has_tabelas)
-            return Response(js, status=200, mimetype='application/json')
-
-@app.route('/v1.0/tabela/<int:tabela_id>', methods=['GET'])
-def tabela(tabela_id):
-    if request.method == 'GET':
-        mydb_cur = mysql.connection.cursor()
-        query = 'SELECT tabela_id, nome FROM tabela WHERE tabela_id = %s;'
-        mydb_cur.execute(query, (tabela_id,))
-        data = mydb_cur.fetchall()
-        if len(data) <= 0:
-            return Response(status=404)
-        else:
-            tabela = {
-                'tabela_id': data[0][0],
-                'nome': data[0][1]
-            }
-            js = json.dumps(tabela)
-            return Response(js, status=200, mimetype='application/json')    
-
 # @app.route('/v1.0/about')
 # def about():
 #     return render_template('about.html')
@@ -1304,7 +1241,6 @@ def tabela(tabela_id):
 @app.errorhandler(404)
 def page_not_found(e):
     return 'This page was not found'
-
 
 
 if __name__ == '__main__':
